@@ -3,20 +3,24 @@
 
 ((nil
   .
-  (;; Treat project-specific terminology as first-class vocabulary so
+  ((sentence-end-double-space . t)
+
+   ;; Treat project-specific terminology as first-class vocabulary so
    ;; spell checking focuses on genuine mistakes rather than
    ;; repeatedly flagging domain terms.
-   (jinx-dir-local-words . "dirToAttrs infix nixpkgs")))
+   (jinx-dir-local-words . "
+configFile dev devShell devShells devshell dirToAttrs env github infix
+nixago nixpkgs numtide shellHook utils")))
 
  (nix-mode
   .
-  (;; Enforce a narrow, consistent formatting style for Nix code in
-   ;; this project, keeping expressions compact and visually uniform.
-   (apheleia-formatters . ((nixfmt "nixfmt" "--width" "50")))))
+  ;; Enforce a narrow, consistent formatting style for Nix code in
+  ;; this project, keeping expressions compact and visually uniform.
+  ((apheleia-formatters . ((nixfmt "nixfmt" "--width" "50")))))
 
  (nix-ts-mode
   .
-  (;; Apply the same formatting constraints to Tree-sitter-based Nix
-   ;; buffers, ensuring consistency regardless of the active major
-   ;; mode.
-   (apheleia-formatters . ((nixfmt "nixfmt" "--width" "50"))))))
+  ;; Apply the same formatting constraints to Tree-sitter-based Nix
+  ;; buffers, ensuring consistency regardless of the active major
+  ;; mode.
+  ((apheleia-formatters . ((nixfmt "nixfmt" "--width" "50"))))))

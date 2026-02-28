@@ -91,6 +91,7 @@
         ];
 
         partitionedAttrs = {
+          flakeModules = "infix";
           lib = "infix";
         };
 
