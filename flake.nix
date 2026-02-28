@@ -27,12 +27,57 @@
   outputs =
     inputs@{
       flake-parts,
+      nixpkgs,
       ...
     }:
     let
       inherit (flake-parts.lib)
         mkFlake
         ;
+
+      infix-lib = import ./infix/lib {
+        inherit (nixpkgs)
+          lib
+          ;
+      };
+
+      inherit (infix-lib)
+        dirToAttrs
+        mapAttrsRecursive'
+        stemOf
+        ;
+
+      inherit (nixpkgs.lib)
+        filterAttrsRecursive
+        hasSuffix
+        isAttrs
+        last
+        nameValuePair
+        pipe
+        toCamelCase
+        ;
+
+      parts = pipe (dirToAttrs ./.) [
+        (filterAttrsRecursive (
+          name: value:
+          if (isAttrs value) || (name == "__path") then
+            true
+          else
+            hasSuffix ".nix" (toString value)
+        ))
+        (mapAttrsRecursive' (
+          path: value:
+          let
+            basename = last path;
+          in
+          nameValuePair (
+            if basename == "__path" then
+              "__path"
+            else
+              (toCamelCase (stemOf basename))
+          ) value
+        ))
+      ];
     in
     mkFlake
       {
@@ -41,6 +86,26 @@
           ;
       }
       {
+        imports = [
+          flake-parts.flakeModules.partitions
+        ];
+
+        partitionedAttrs = {
+          lib = "infix";
+        };
+
+        partitions = {
+          infix = {
+            extraInputsFlake = parts.infix.__path;
+
+            module = {
+              imports = [
+                parts.infix.flakeModule
+              ];
+            };
+          };
+        };
+
         systems = [ ];
       };
 }

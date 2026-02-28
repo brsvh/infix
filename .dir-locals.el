@@ -6,7 +6,7 @@
   (;; Treat project-specific terminology as first-class vocabulary so
    ;; spell checking focuses on genuine mistakes rather than
    ;; repeatedly flagging domain terms.
-   (jinx-dir-local-words . "infix nixpkgs")))
+   (jinx-dir-local-words . "dirToAttrs infix nixpkgs")))
 
  (nix-mode
   .
