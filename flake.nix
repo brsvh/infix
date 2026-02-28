@@ -91,11 +91,22 @@
         ];
 
         partitionedAttrs = {
+          devShells = "dev";
           flakeModules = "infix";
           lib = "infix";
         };
 
         partitions = {
+          dev = {
+            extraInputsFlake = parts.dev.__path;
+
+            module = {
+              imports = [
+                parts.dev.flakeModule
+              ];
+            };
+          };
+
           infix = {
             extraInputsFlake = parts.infix.__path;
 

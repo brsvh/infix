@@ -10,7 +10,8 @@
    ;; repeatedly flagging domain terms.
    (jinx-dir-local-words . "
 configFile dev devShell devShells devshell dirToAttrs env github infix
-nixago nixpkgs numtide shellHook utils")))
+lefthook lf mkdir nixago nixpkgs numtide pipefail rebase shellHook
+toml treefmt usr utils yaml yml")))
 
  (nix-mode
   .
