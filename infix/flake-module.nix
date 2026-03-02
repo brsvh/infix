@@ -9,6 +9,7 @@ let
     isAttrs
     last
     nameValuePair
+    packagesFromDirectoryRecursive
     pipe
     toCamelCase
     ;
@@ -46,6 +47,22 @@ in
       ;
 
     lib = infix-lib;
+
+    overlays = {
+      default =
+        final: prev:
+        packagesFromDirectoryRecursive {
+          inherit (final)
+            callPackage
+            ;
+
+          inherit (prev)
+            newScope
+            ;
+
+          directory = ./packages;
+        };
+    };
   };
 
   systems = [ ];

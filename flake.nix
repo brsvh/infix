@@ -94,6 +94,7 @@
           devShells = "dev";
           flakeModules = "infix";
           lib = "infix";
+          overlays = "infix";
         };
 
         partitions = {
