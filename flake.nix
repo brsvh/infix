@@ -93,6 +93,7 @@
         partitionedAttrs = {
           devShells = "dev";
           flakeModules = "infix";
+          formatter = "dev";
           lib = "infix";
           overlays = "infix";
         };
