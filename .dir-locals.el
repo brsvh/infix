@@ -9,11 +9,11 @@
    ;; spell checking focuses on genuine mistakes rather than
    ;; repeatedly flagging domain terms.
    (jinx-dir-local-words . "
-config configFile dev devShell devShells devshell dirToAttrs env
-github infix lefthook lf linux microsoft mkdir mktemp nixago nixpkgs
-numtide pipefail preInstall preUnpack postInstall postUnpack rebase
-rtf runHook shellHook src tempdir toml treefmt truetype ttc ttf usr
-utils wim xargs yaml yml")))
+config configFile dev devShell devShells devshell devshells dirToAttrs
+direnv emacs env github gitignore infix lefthook lf linux microsoft mkdir
+mktemp nixago nixfmt nixpkgs numtide pipefail preInstall preUnpack
+postInstall postUnpack rebase rtf runHook shellHook src tempdir toml
+treefmt truetype ttc ttf untracked usr utils wim xargs yaml yml")))
 
  (nix-mode
   .
