@@ -35,7 +35,7 @@
         mkFlake
         ;
 
-      infix-lib = import ./infix/lib {
+      infix-lib = import ./src/lib {
         inherit (nixpkgs)
           lib
           ;
@@ -48,16 +48,18 @@
         ;
 
       inherit (nixpkgs.lib)
+        filterAttrs
         filterAttrsRecursive
         hasSuffix
         isAttrs
         last
         nameValuePair
+        packagesFromDirectoryRecursive
         pipe
         toCamelCase
         ;
 
-      parts = pipe (dirToAttrs ./.) [
+      dev = pipe (dirToAttrs ./src/dev) [
         (filterAttrsRecursive (
           name: value:
           if (isAttrs value) || (name == "__path") then
@@ -78,6 +80,21 @@
           ) value
         ))
       ];
+
+      infix = pipe (dirToAttrs ./src) [
+        (filterAttrs (name: _: name != "dev"))
+        (filterAttrsRecursive (
+          name: value:
+          if isAttrs value then
+            true
+          else
+            hasSuffix ".nix" (toString value)
+        ))
+        (mapAttrsRecursive' (
+          path: value:
+          nameValuePair (toCamelCase (stemOf (last path))) value
+        ))
+      ];
     in
     mkFlake
       {
@@ -90,31 +107,42 @@
           flake-parts.flakeModules.partitions
         ];
 
+        flake = {
+          inherit (infix)
+            flakeModules
+            ;
+
+          lib = infix-lib;
+
+          overlays = {
+            default =
+              final: prev:
+              packagesFromDirectoryRecursive {
+                inherit (final)
+                  callPackage
+                  ;
+
+                inherit (prev)
+                  newScope
+                  ;
+
+                directory = ./src/packages;
+              };
+          };
+        };
+
         partitionedAttrs = {
           devShells = "dev";
-          flakeModules = "infix";
           formatter = "dev";
-          lib = "infix";
-          overlays = "infix";
         };
 
         partitions = {
           dev = {
-            extraInputsFlake = parts.dev.__path;
+            extraInputsFlake = dev.__path;
 
             module = {
               imports = [
-                parts.dev.flakeModule
-              ];
-            };
-          };
-
-          infix = {
-            extraInputsFlake = parts.infix.__path;
-
-            module = {
-              imports = [
-                parts.infix.flakeModule
+                dev.flakeModule
               ];
             };
           };
