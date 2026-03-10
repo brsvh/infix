@@ -191,7 +191,7 @@ let
           defaultText = "${config.directory}/disko.nix";
 
           description = ''
-            The filesystems declaration file (by Disko).
+            The file-systems declaration file (by Disko).
           '';
 
           type = types.path;
@@ -201,7 +201,7 @@ let
           defaultText = "${config.directory}/etc";
 
           description = ''
-            The directory beneath which system-wide configuraiton files.
+            The directory beneath which system-wide configuration files.
           '';
 
           type = types.path;

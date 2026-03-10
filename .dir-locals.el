@@ -11,8 +11,8 @@
    (jinx-dir-local-words . "
 NixOS attrsets config configFile dev devShell devShells devshell
 devshells dirToAttrs direnv disko emacs env facter filesystem github
-gitignore infix lefthook lf linux microsoft mkdir mktemp nixago nixfmt
-nixos nixpkgs numtide pipefail preInstall preUnpack postInstall
+gitignore infix json lefthook lf linux microsoft mkdir mktemp nixago
+nixfmt nixos nixpkgs numtide pipefail preInstall preUnpack postInstall
 postUnpack rebase rtf runHook shellHook src tempdir toml treefmt
 truetype ttc ttf untracked usr utf utils wim xargs yaml yml")))
 
