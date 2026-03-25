@@ -10,14 +10,11 @@ let
 
   inherit (lib)
     assertMsg
-    concatStringsSep
-    filter
-    init
-    isString
-    length
+    elemAt
     mapAttrs'
+    match
     nameValuePair
-    split
+    substring
     ;
 in
 rec {
@@ -70,10 +67,10 @@ rec {
     let
       basename = baseNameOf filename;
 
-      list = filter isString (split "\\." basename);
+      m = match "^(.+)\\.([^.]+)$" basename;
     in
-    if length list > 1 then
-      concatStringsSep "." (init list)
+    if m == null || substring 0 1 basename == "." then
+      basename
     else
-      basename;
+      elemAt m 0;
 }
