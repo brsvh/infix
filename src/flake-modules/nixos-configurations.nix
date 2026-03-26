@@ -35,12 +35,13 @@ let
     mkDefault
     mkOption
     nameValuePair
+    optionals
     pathExists
     pipe
     types
     ;
 
-  hasInput =
+  requireInput =
     input:
     if hasAttr input inputs then
       inputs.${input}
@@ -49,134 +50,140 @@ let
         ${input} input not found, please add a ${input} input to your flake.
       '';
 
-  disko = hasInput "disko";
+  optionalInput =
+    input:
+    if hasAttr input inputs then
+      inputs.${input}
+    else
+      null;
 
-  facter = hasInput "facter";
+  nixpkgs = requireInput "nixpkgs";
 
-  home-manager = hasInput "home-manager";
+  disko = optionalInput "disko";
 
-  nixpkgs = hasInput "nixpkgs";
+  facter = optionalInput "facter";
+
+  home-manager = optionalInput "home-manager";
+
+  userModule =
+    {
+      config,
+      ...
+    }:
+    {
+      options = {
+        directory = mkOption {
+          description = ''
+            The Home Configuration directory.
+          '';
+
+          type = types.path;
+        };
+
+        etcDirectory = mkOption {
+          defaultText = "${config.directory}/etc";
+
+          description = ''
+            The directory beneath which user-wide configuration files.
+          '';
+
+          type = types.path;
+        };
+
+        homeFile = mkOption {
+          defaultText = "${config.directory}/home.nix";
+
+          description = ''
+            The top-level Home Configuration File.
+          '';
+
+          type = types.path;
+        };
+
+        modules = mkOption {
+          default = [ ];
+
+          description = ''
+            Extra Home modules applied to the Home Configuration.
+
+            Accepts module paths,  or inline module functions.
+          '';
+
+          type = with types; listOf deferredModule;
+        };
+
+        modulesDirectory = mkOption {
+          defaultText = "${config.directory}/modules";
+
+          description = ''
+            The directory beneath which user-wide Home modules.
+          '';
+
+          type = types.path;
+        };
+
+        profiles = mkOption {
+          default = [ ];
+
+          description = ''
+            Extra Home profiles applied to the Home Configuration.
+
+            Inhere profiles are config-only module, accepts module paths, or
+            inline module functions.
+          '';
+
+          type = with types; listOf deferredModule;
+        };
+
+        profilesDirectory = mkOption {
+          defaultText = "${config.directory}/profiles";
+
+          description = ''
+            The directory beneath which user-wide Home profiles.
+          '';
+
+          type = types.path;
+        };
+
+        userFile = mkOption {
+          defaultText = "${config.directory}/user.nix";
+
+          description = ''
+            The user declaration file for NixOS Configuration.
+          '';
+
+          type = types.path;
+        };
+      };
+
+      config = {
+        etcDirectory = mkDefault (
+          config.directory + /etc
+        );
+
+        homeFile = mkDefault (
+          config.directory + /home.nix
+        );
+
+        modulesDirectory = mkDefault (
+          config.directory + /modules
+        );
+
+        profilesDirectory = mkDefault (
+          config.directory + /profiles
+        );
+
+        userFile = mkDefault (
+          config.directory + /user.nix
+        );
+      };
+    };
 
   nixosConfigurationModule =
     {
       config,
       ...
     }:
-    let
-      userModule =
-        {
-          config,
-          ...
-        }:
-        {
-          options = {
-            directory = mkOption {
-              description = ''
-                The Home Configuration directory.
-              '';
-
-              type = types.path;
-            };
-
-            etcDirectory = mkOption {
-              defaultText = "${config.directory}/etc";
-
-              description = ''
-                The directory beneath which user-wide configuration files.
-              '';
-
-              type = types.path;
-            };
-
-            homeFile = mkOption {
-              defaultText = "${config.directory}/home.nix";
-
-              description = ''
-                The top-level Home Configuration File.
-              '';
-
-              type = types.path;
-            };
-
-            modules = mkOption {
-              default = [ ];
-
-              description = ''
-                Extra Home modules applied to the Home Configuration.
-
-                Accepts module paths,  or inline module functions.
-              '';
-
-              type = with types; listOf deferredModule;
-            };
-
-            modulesDirectory = mkOption {
-              defaultText = "${config.directory}/modules";
-
-              description = ''
-                The directory beneath which user-wide Home modules.
-              '';
-
-              type = types.path;
-            };
-
-            profiles = mkOption {
-              default = [ ];
-
-              description = ''
-                Extra Home profiles applied to the Home Configuration.
-
-                Inhere profiles are config-only module, accepts module paths, or
-                inline module functions.
-              '';
-
-              type = with types; listOf deferredModule;
-            };
-
-            profilesDirectory = mkOption {
-              defaultText = "${config.directory}/profiles";
-
-              description = ''
-                The directory beneath which user-wide Home profiles.
-              '';
-
-              type = types.path;
-            };
-
-            userFile = mkOption {
-              defaultText = "${config.directory}/user.nix";
-
-              description = ''
-                The user declaration file for NixOS Configuration.
-              '';
-
-              type = types.path;
-            };
-          };
-
-          config = {
-            etcDirectory = mkDefault (
-              config.directory + /etc
-            );
-
-            homeFile = mkDefault (
-              config.directory + /home.nix
-            );
-
-            modulesDirectory = mkDefault (
-              config.directory + /modules
-            );
-
-            profilesDirectory = mkDefault (
-              config.directory + /profiles
-            );
-
-            userFile = mkDefault (
-              config.directory + /user.nix
-            );
-          };
-        };
-    in
     {
       options = {
         directory = mkOption {
@@ -195,6 +202,36 @@ let
           '';
 
           type = types.path;
+        };
+
+        enableDisko = mkOption {
+          default = disko != null;
+
+          description = ''
+            Whether to import disko.nixosModules.disko and diskoFile.
+          '';
+
+          type = types.bool;
+        };
+
+        enableFacter = mkOption {
+          default = facter != null;
+
+          description = ''
+            Whether to import facter.nixosModules.facter and facterReportFile.
+          '';
+
+          type = types.bool;
+        };
+
+        enableHomeManager = mkOption {
+          default = home-manager != null;
+
+          description = ''
+            Whether to import home-manager.nixosModules.home-manager.
+          '';
+
+          type = types.bool;
         };
 
         etcDirectory = mkOption {
@@ -331,6 +368,9 @@ let
     value@{
       directory,
       diskoFile,
+      enableDisko,
+      enableFacter,
+      enableHomeManager,
       etcDirectory,
       facterReportFile,
       modules,
@@ -343,26 +383,35 @@ let
       ...
     }:
     let
-      dirToAttrs' =
+      liftDefaultAttrs =
+        mapAttrsRecursiveCond'
+          (v: !(isAttrs v && v ? default))
+          (
+            path: v:
+            nameValuePair (stemOf (last path)) (
+              if isAttrs v && v ? default then v.default else v
+            )
+          );
+
+      removePathAttrs = filterAttrsRecursive (
+        name: _: name != "__path"
+      );
+
+      keepOnlyNixAttrs = filterAttrsRecursive (
+        name: value:
+        if (isAttrs value) || (name == "__path") then
+          true
+        else
+          hasSuffix ".nix" (toString value)
+      );
+
+      moduleDirToAttrs =
         dir:
         if pathExists dir then
           pipe (dirToAttrs dir) [
-            (filterAttrsRecursive (
-              _: v:
-              if isAttrs v then
-                true
-              else
-                hasSuffix ".nix" (toString v)
-            ))
-            (mapAttrsRecursiveCond'
-              (v: !(isAttrs v && v ? default))
-              (
-                path: v:
-                nameValuePair (stemOf (last path)) (
-                  if isAttrs v && v ? default then v.default else v
-                )
-              )
-            )
+            keepOnlyNixAttrs
+            liftDefaultAttrs
+            removePathAttrs
           ]
         else
           { };
@@ -385,7 +434,7 @@ let
       dirToList =
         dir:
         mapAttrsToListRecursive (_: v: v) (
-          dirToAttrs' dir
+          moduleDirToAttrs dir
         );
 
       userModuleList =
@@ -409,8 +458,8 @@ let
 
       usersSpecialArgs = mapAttrs (_: v: {
         etc = etcDirToAttrs v.etcDirectory;
-        modules = dirToAttrs' v.modulesDirectory;
-        profiles = dirToAttrs' v.profilesDirectory;
+        modules = moduleDirToAttrs v.modulesDirectory;
+        profiles = moduleDirToAttrs v.profilesDirectory;
       }) users;
 
       finalSpecialArgs = {
@@ -422,27 +471,55 @@ let
       // {
         ${name} = {
           etc = etcDirToAttrs etcDirectory;
-          modules = dirToAttrs' modulesDirectory;
-          profiles = dirToAttrs' profilesDirectory;
+          modules = moduleDirToAttrs modulesDirectory;
+          profiles = moduleDirToAttrs profilesDirectory;
         };
       }
       // usersSpecialArgs;
 
       finalModules = [
         {
+          assertions = [
+            {
+              assertion = !enableDisko || disko != null;
+              message = ''
+                nixosConfigurations.${name}.enableDisko = true requires the
+                disko flake input.
+              '';
+            }
+            {
+              assertion = !enableFacter || facter != null;
+              message = ''
+                nixosConfigurations.${name}.enableFacter = true requires the
+                facter flake input.
+              '';
+            }
+            {
+              assertion =
+                !enableHomeManager || home-manager != null;
+              message = ''
+                nixosConfigurations.${name}.enableHomeManager = true requires
+                the home-manager flake input.
+              '';
+            }
+          ];
+        }
+        {
           networking = {
             hostName = mkDefault "${name}";
           };
         }
+      ]
+      ++ (optionals enableDisko [
         disko.nixosModules.disko
         diskoFile
+      ])
+      ++ (optionals enableFacter [
         facter.nixosModules.facter
         {
-          facter = {
-            reportPath = facterReportFile;
-          };
+          facter.reportPath = facterReportFile;
         }
-      ]
+      ])
       ++ modules
       ++ (dirToList modulesDirectory)
       ++ [
