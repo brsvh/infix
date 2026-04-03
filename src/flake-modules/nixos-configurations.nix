@@ -10,7 +10,7 @@ let
     toString
     ;
 
-  infix-lib = import ../lib {
+  infix-lib = import ../../lib {
     inherit
       lib
       ;

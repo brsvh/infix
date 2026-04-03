@@ -35,7 +35,7 @@
         mkFlake
         ;
 
-      infix-lib = import ./src/lib {
+      infix-lib = import ./lib {
         inherit (nixpkgs)
           lib
           ;
