@@ -363,6 +363,14 @@ let
       };
     };
 
+  mkDiskoConfiguration =
+    _:
+    value@{
+      diskoFile,
+      ...
+    }:
+    import diskoFile;
+
   mkNixOSConfiguration =
     name:
     value@{
@@ -543,6 +551,10 @@ let
     };
 in
 {
+  imports = [
+    disko.flakeModules.disko
+  ];
+
   options = {
     nixosConfigurations = mkOption {
       default = { };
@@ -563,6 +575,8 @@ in
 
   config = {
     flake = {
+      diskoConfigurations = mapAttrs mkDiskoConfiguration config.nixosConfigurations;
+
       nixosConfigurations = mapAttrs mkNixOSConfiguration config.nixosConfigurations;
     };
   };
