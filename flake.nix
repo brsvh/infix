@@ -138,11 +138,23 @@
                     fetchgit
                     ;
 
-                  root = ./src/emacs-packages;
+                  manual-packages = ./src/emacs-packages/manual-packages;
+
+                  melpa-packages = ./src/emacs-packages/melpa-packages;
 
                   scope =
                     f: p:
                     p.override {
+                      manualPackages =
+                        p.manualPackages
+                        // packagesFromDirectoryRecursive {
+                          inherit (f)
+                            callPackage
+                            ;
+
+                          directory = manual-packages;
+                        };
+
                       melpaPackages = p.melpaPackages // {
                         sly-macrostep =
                           p.melpaPackages.sly-macrostep.overrideAttrs
@@ -150,8 +162,8 @@
                               finalAttrs: prevAttrs: {
                                 patches = prevAttrs.patches or [ ] ++ [
                                   (
-                                    root
-                                    + /melpa-packages/sly-macrostep/0001-Make-autoloads-cache-use-lexical-binding.patch
+                                    melpa-packages
+                                    + /sly-macrostep/0001-Make-autoloads-cache-use-lexical-binding.patch
                                   )
                                 ];
                               }
@@ -163,7 +175,7 @@
                               finalAttrs: prevAttrs: {
                                 patches = prevAttrs.patches or [ ] ++ [
                                   (
-                                    root
+                                    melpa-packages
                                     + /melpa-packages/sly-named-readtables/0001-Make-autoloads-cache-use-lexical-binding.patch
                                   )
                                 ];
