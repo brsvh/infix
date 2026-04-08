@@ -12,13 +12,13 @@
 Codeberg NixOS attrsets autoloads bs config configFile dev devShell
 devShells devshell devshells dirToAttrs direnv disko
 diskoConfigurations diskoFile emacs enableDisko enableFacter
-enableHomeManager env facter facterReportFile filesystem github
-gitignore infix json lefthook lf linux macrostep manualPackages melpa
-melpaPackages microsoft mkdir mktemp nixago nixfmt nixos
+enableHomeManager env facter facterReportFile filesystem flymake
+github gitignore infix json lefthook lf linux macrostep manualPackages
+melpa melpaPackages microsoft mkdir mktemp nixago nixfmt nixos
 nixosConfigurations nixosModules nixpkgs numtide pipefail preInstall
-preUnpack postInstall postUnpack readtables rebase rtf runHook
-shellHook src tempdir toml treefmt truetype ttc ttf untracked usr utf
-utils wim xargs yaml yml")))
+preUnpack posframe postInstall postUnpack readtables rebase rtf
+runHook shellHook src tempdir toml treefmt truetype ttc ttf untracked
+usr utf utils wim xargs yaml yml")))
 
  (nix-mode
   .
