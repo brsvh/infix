@@ -176,7 +176,7 @@
                                 patches = prevAttrs.patches or [ ] ++ [
                                   (
                                     melpa-packages
-                                    + /melpa-packages/sly-named-readtables/0001-Make-autoloads-cache-use-lexical-binding.patch
+                                    + /sly-named-readtables/0001-Make-autoloads-cache-use-lexical-binding.patch
                                   )
                                 ];
                               }
