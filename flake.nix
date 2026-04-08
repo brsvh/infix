@@ -128,6 +128,36 @@
 
                 directory = ./src/packages;
               };
+
+            emacs-packages = final: prev: {
+              emacsPackagesFor =
+                emacs:
+                let
+                  inherit (prev)
+                    emacsPackagesFor
+                    fetchgit
+                    ;
+
+                  scope =
+                    f: p:
+                    p.override {
+                      melpaPackages = p.melpaPackages // {
+                        switch-window =
+                          p.melpaPackages.switch-window.overrideAttrs
+                            (
+                              finalAttrs: prevAttrs: {
+                                src = fetchgit {
+                                  url = "https://github.com/brsvh/switch-window.git";
+                                  rev = "4217ab3688e7a902185e25209e69e91b8a5a0599";
+                                  hash = "sha256-qaPKQkMveLeL5xlgBcBmXPXfhM8m9TrQDiZBNMo6tHY=";
+                                };
+                              }
+                            );
+                      };
+                    };
+                in
+                (emacsPackagesFor emacs).overrideScope scope;
+            };
           };
         };
 
