@@ -1,0 +1,23 @@
+From 7dcba644ae7bba41cec50610fe851f47106404d1 Mon Sep 17 00:00:00 2001
+From: Bingshan Chang <chang@bingshan.org>
+Date: Wed, 7 Jan 2026 02:49:43 +0000
+Subject: [PATCH] Make autoloads cache use lexical-binding
+
+* sly-macrostep-autoloads.el: Enable lexical-binding.
+---
+ sly-macrostep-autoloads.el | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/sly-macrostep-autoloads.el b/sly-macrostep-autoloads.el
+index 46083bd..4583b2c 100644
+--- a/sly-macrostep-autoloads.el
++++ b/sly-macrostep-autoloads.el
+@@ -1,4 +1,4 @@
+-;;; sly-macrostep-autoloads.el --- automatically extracted autoloads
++;;; sly-macrostep-autoloads.el --- automatically extracted autoloads -*- lexical-binding: t -*-
+ ;;
+ ;;; Code:
+ 
+-- 
+2.52.0
+

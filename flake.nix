@@ -138,10 +138,25 @@
                     fetchgit
                     ;
 
+                  root = ./src/emacs-packages;
+
                   scope =
                     f: p:
                     p.override {
                       melpaPackages = p.melpaPackages // {
+                        sly-macrostep =
+                          p.melpaPackages.sly-macrostep.overrideAttrs
+                            (
+                              finalAttrs: prevAttrs: {
+                                patches = prevAttrs.patches or [ ] ++ [
+                                  (
+                                    root
+                                    + /melpa-packages/sly-macrostep/0001-Make-autoloads-cache-use-lexical-binding.patch
+                                  )
+                                ];
+                              }
+                            );
+
                         switch-window =
                           p.melpaPackages.switch-window.overrideAttrs
                             (
