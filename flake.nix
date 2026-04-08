@@ -157,6 +157,19 @@
                               }
                             );
 
+                        sly-named-readtables =
+                          p.melpaPackages.sly-named-readtables.overrideAttrs
+                            (
+                              finalAttrs: prevAttrs: {
+                                patches = prevAttrs.patches or [ ] ++ [
+                                  (
+                                    root
+                                    + /melpa-packages/sly-named-readtables/0001-Make-autoloads-cache-use-lexical-binding.patch
+                                  )
+                                ];
+                              }
+                            );
+
                         switch-window =
                           p.melpaPackages.switch-window.overrideAttrs
                             (

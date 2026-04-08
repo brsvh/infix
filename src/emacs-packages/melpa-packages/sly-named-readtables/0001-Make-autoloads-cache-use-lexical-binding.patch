@@ -1,0 +1,23 @@
+From 41007d385b748f4e6b08bd5502e1d7cec6f8943b Mon Sep 17 00:00:00 2001
+From: Bingshan Chang <chang@bingshan.org>
+Date: Wed, 7 Jan 2026 02:53:43 +0000
+Subject: [PATCH] Make autoloads cache use lexical-binding
+
+* sly-named-readtables-autoloads.el: Enable lexical-binding.
+---
+ sly-named-readtables-autoloads.el | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/sly-named-readtables-autoloads.el b/sly-named-readtables-autoloads.el
+index 75f70df..15e81c9 100644
+--- a/sly-named-readtables-autoloads.el
++++ b/sly-named-readtables-autoloads.el
+@@ -1,4 +1,4 @@
+-;;; sly-named-readtables-autoloads.el --- automatically extracted autoloads
++;;; sly-named-readtables-autoloads.el --- automatically extracted autoloads -*- lexical-binding: t -*-
+ ;;
+ ;;; Code:
+ 
+-- 
+2.52.0
+

@@ -15,9 +15,9 @@ diskoFile emacs enableDisko enableFacter enableHomeManager env facter
 facterReportFile filesystem github gitignore infix json lefthook lf
 linux macrostep melpa microsoft mkdir mktemp nixago nixfmt nixos
 nixosConfigurations nixosModules nixpkgs numtide pipefail preInstall
-preUnpack postInstall postUnpack rebase rtf runHook shellHook src
-tempdir toml treefmt truetype ttc ttf untracked usr utf utils wim
-xargs yaml yml")))
+preUnpack postInstall postUnpack readtables rebase rtf runHook
+shellHook src tempdir toml treefmt truetype ttc ttf untracked usr utf
+utils wim xargs yaml yml")))
 
  (nix-mode
   .
