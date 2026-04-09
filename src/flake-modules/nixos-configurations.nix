@@ -61,8 +61,6 @@ let
 
   disko = optionalInput "disko";
 
-  facter = optionalInput "facter";
-
   home-manager = optionalInput "home-manager";
 
   userModule =
@@ -209,16 +207,6 @@ let
 
           description = ''
             Whether to import disko.nixosModules.disko and diskoFile.
-          '';
-
-          type = types.bool;
-        };
-
-        enableFacter = mkOption {
-          default = facter != null;
-
-          description = ''
-            Whether to import facter.nixosModules.facter and facterReportFile.
           '';
 
           type = types.bool;
@@ -377,7 +365,6 @@ let
       directory,
       diskoFile,
       enableDisko,
-      enableFacter,
       enableHomeManager,
       etcDirectory,
       facterReportFile,
@@ -496,13 +483,6 @@ let
               '';
             }
             {
-              assertion = !enableFacter || facter != null;
-              message = ''
-                nixosConfigurations.${name}.enableFacter = true requires the
-                facter flake input.
-              '';
-            }
-            {
               assertion =
                 !enableHomeManager || home-manager != null;
               message = ''
@@ -522,12 +502,15 @@ let
         disko.nixosModules.disko
         diskoFile
       ])
-      ++ (optionals enableFacter [
-        facter.nixosModules.facter
+      ++ [
         {
-          facter.reportPath = facterReportFile;
+          hardware = {
+            facter = {
+              reportPath = facterReportFile;
+            };
+          };
         }
-      ])
+      ]
       ++ modules
       ++ (dirToList modulesDirectory)
       ++ [
