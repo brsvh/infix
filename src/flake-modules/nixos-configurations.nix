@@ -242,6 +242,47 @@ let
     }:
     {
       options = {
+        allowAliases = mkOption {
+          default = true;
+
+          description = ''
+            Whether to expose old attribute names for compatibility.
+          '';
+
+          type = types.bool;
+        };
+
+        allowBroken = mkOption {
+
+          default = false;
+
+          description = ''
+            Whether to allow broken packages.
+          '';
+
+          type = types.bool;
+        };
+
+        allowUnfree = mkOption {
+          default = false;
+
+          description = ''
+            Whether to allow unfree packages.
+          '';
+
+          type = types.bool;
+        };
+
+        allowUnfreePackages = mkOption {
+          default = [ ];
+
+          description = ''
+            Allows specific unfree packages to be used.
+          '';
+
+          type = with lib.types; listOf str;
+        };
+
         directory = mkOption {
           description = ''
             The NixOS Configuration directory.
@@ -410,6 +451,10 @@ let
   mkHomeConfigurations =
     name:
     value@{
+      allowAliases,
+      allowBroken,
+      allowUnfree,
+      allowUnfreePackages,
       etcDirectory,
       facterReportFile,
       modulesDirectory,
@@ -428,6 +473,15 @@ let
           overlays
           system
           ;
+
+        config = {
+          inherit
+            allowAliases
+            allowBroken
+            allowUnfree
+            allowUnfreePackages
+            ;
+        };
       };
 
       usersSpecialArgs = mapAttrs (_: v: {
@@ -479,6 +533,10 @@ let
   mkNixOSConfiguration =
     name:
     value@{
+      allowAliases,
+      allowBroken,
+      allowUnfree,
+      allowUnfreePackages,
       directory,
       diskoFile,
       etcDirectory,
@@ -544,6 +602,15 @@ let
             inherit
               overlays
               ;
+
+            config = {
+              inherit
+                allowAliases
+                allowBroken
+                allowUnfree
+                allowUnfreePackages
+                ;
+            };
           };
         }
       ]
