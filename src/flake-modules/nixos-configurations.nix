@@ -24,12 +24,15 @@ let
     ;
 
   inherit (lib)
+    concatMapAttrs
     filterAttrsRecursive
+    fromJSON
     hasAttr
     hasSuffix
     isAttrs
     last
     mapAttrs
+    mapAttrs'
     mapAttrsToList
     mapAttrsToListRecursive
     mkDefault
@@ -38,6 +41,7 @@ let
     optionals
     pathExists
     pipe
+    readFile
     types
     ;
 
@@ -59,9 +63,63 @@ let
 
   nixpkgs = requireInput "nixpkgs";
 
-  disko = optionalInput "disko";
+  disko = requireInput "disko";
 
-  home-manager = optionalInput "home-manager";
+  home-manager = requireInput "home-manager";
+
+  liftDefaultAttrs =
+    mapAttrsRecursiveCond'
+      (v: !(isAttrs v && v ? default))
+      (
+        path: v:
+        nameValuePair (stemOf (last path)) (
+          if isAttrs v && v ? default then v.default else v
+        )
+      );
+
+  removePathAttrs = filterAttrsRecursive (
+    name: _: name != "__path"
+  );
+
+  keepOnlyNixAttrs = filterAttrsRecursive (
+    name: value:
+    if (isAttrs value) || (name == "__path") then
+      true
+    else
+      hasSuffix ".nix" (toString value)
+  );
+
+  moduleDirToAttrs =
+    dir:
+    if pathExists dir then
+      pipe (dirToAttrs dir) [
+        keepOnlyNixAttrs
+        liftDefaultAttrs
+        removePathAttrs
+      ]
+    else
+      { };
+
+  etcDirToAttrs =
+    dir:
+    if pathExists dir then
+      pipe (dirToAttrs dir) [
+        (mapAttrsRecursive' (
+          path: value:
+          if (last path) == "__path" then
+            nameValuePair "__path" value
+          else
+            nameValuePair (stemOf (last path)) value
+        ))
+      ]
+    else
+      { };
+
+  dirToList =
+    dir:
+    mapAttrsToListRecursive (_: v: v) (
+      moduleDirToAttrs dir
+    );
 
   userModule =
     {
@@ -202,26 +260,6 @@ let
           type = types.path;
         };
 
-        enableDisko = mkOption {
-          default = disko != null;
-
-          description = ''
-            Whether to import disko.nixosModules.disko and diskoFile.
-          '';
-
-          type = types.bool;
-        };
-
-        enableHomeManager = mkOption {
-          default = home-manager != null;
-
-          description = ''
-            Whether to import home-manager.nixosModules.home-manager.
-          '';
-
-          type = types.bool;
-        };
-
         etcDirectory = mkOption {
           defaultText = "${config.directory}/etc";
 
@@ -262,6 +300,16 @@ let
           '';
 
           type = types.path;
+        };
+
+        overlays = mkOption {
+          default = [ ];
+
+          description = ''
+            Extra overlays applied to the NixOS Configuration.
+          '';
+
+          type = types.raw;
         };
 
         profiles = mkOption {
@@ -359,17 +407,85 @@ let
     }:
     import diskoFile;
 
+  mkHomeConfigurations =
+    name:
+    value@{
+      etcDirectory,
+      facterReportFile,
+      modulesDirectory,
+      profilesDirectory,
+      overlays,
+      specialArgs,
+      users,
+      ...
+    }:
+    let
+      system =
+        (fromJSON (readFile facterReportFile)).system;
+
+      pkgs = import nixpkgs {
+        inherit
+          overlays
+          system
+          ;
+      };
+
+      usersSpecialArgs = mapAttrs (_: v: {
+        etc = etcDirToAttrs v.etcDirectory;
+        modules = moduleDirToAttrs v.modulesDirectory;
+        profiles = moduleDirToAttrs v.profilesDirectory;
+      }) users;
+
+      finalSpecialArgs = {
+        inherit
+          inputs
+          ;
+      }
+      // specialArgs
+      // {
+        ${name} = {
+          etc = etcDirToAttrs etcDirectory;
+          modules = moduleDirToAttrs modulesDirectory;
+          profiles = moduleDirToAttrs profilesDirectory;
+        };
+      }
+      // usersSpecialArgs;
+
+      configurations = mapAttrs' (
+        n: v:
+        let
+          extraSpecialArgs = finalSpecialArgs;
+
+          modules =
+            v.modules
+            ++ (dirToList v.modulesDirectory)
+            ++ [ v.homeFile ]
+            ++ v.profiles
+            ++ (dirToList v.profilesDirectory);
+        in
+        nameValuePair "${n}@${name}" (
+          home-manager.lib.homeManagerConfiguration {
+            inherit
+              extraSpecialArgs
+              modules
+              pkgs
+              ;
+          }
+        )
+      ) users;
+    in
+    configurations;
+
   mkNixOSConfiguration =
     name:
     value@{
       directory,
       diskoFile,
-      enableDisko,
-      enableHomeManager,
       etcDirectory,
       facterReportFile,
       modules,
       modulesDirectory,
+      overlays,
       profiles,
       profilesDirectory,
       specialArgs,
@@ -378,60 +494,6 @@ let
       ...
     }:
     let
-      liftDefaultAttrs =
-        mapAttrsRecursiveCond'
-          (v: !(isAttrs v && v ? default))
-          (
-            path: v:
-            nameValuePair (stemOf (last path)) (
-              if isAttrs v && v ? default then v.default else v
-            )
-          );
-
-      removePathAttrs = filterAttrsRecursive (
-        name: _: name != "__path"
-      );
-
-      keepOnlyNixAttrs = filterAttrsRecursive (
-        name: value:
-        if (isAttrs value) || (name == "__path") then
-          true
-        else
-          hasSuffix ".nix" (toString value)
-      );
-
-      moduleDirToAttrs =
-        dir:
-        if pathExists dir then
-          pipe (dirToAttrs dir) [
-            keepOnlyNixAttrs
-            liftDefaultAttrs
-            removePathAttrs
-          ]
-        else
-          { };
-
-      etcDirToAttrs =
-        dir:
-        if pathExists dir then
-          pipe (dirToAttrs dir) [
-            (mapAttrsRecursive' (
-              path: value:
-              if (last path) == "__path" then
-                nameValuePair "__path" value
-              else
-                nameValuePair (stemOf (last path)) value
-            ))
-          ]
-        else
-          { };
-
-      dirToList =
-        dir:
-        mapAttrsToListRecursive (_: v: v) (
-          moduleDirToAttrs dir
-        );
-
       userModuleList =
         (mapAttrsToList (_: v: v.userFile) users)
         ++ (mapAttrsToList (n: v: {
@@ -474,34 +536,21 @@ let
 
       finalModules = [
         {
-          assertions = [
-            {
-              assertion = !enableDisko || disko != null;
-              message = ''
-                nixosConfigurations.${name}.enableDisko = true requires the
-                disko flake input.
-              '';
-            }
-            {
-              assertion =
-                !enableHomeManager || home-manager != null;
-              message = ''
-                nixosConfigurations.${name}.enableHomeManager = true requires
-                the home-manager flake input.
-              '';
-            }
-          ];
-        }
-        {
           networking = {
             hostName = mkDefault "${name}";
           };
+
+          nixpkgs = {
+            inherit
+              overlays
+              ;
+          };
         }
       ]
-      ++ (optionals enableDisko [
+      ++ [
         disko.nixosModules.disko
         diskoFile
-      ])
+      ]
       ++ [
         {
           hardware = {
@@ -536,6 +585,7 @@ in
 {
   imports = [
     disko.flakeModules.disko
+    home-manager.flakeModules.home-manager
   ];
 
   options = {
@@ -559,6 +609,10 @@ in
   config = {
     flake = {
       diskoConfigurations = mapAttrs mkDiskoConfiguration config.nixosConfigurations;
+
+      homeConfigurations = concatMapAttrs (_: v: v) (
+        mapAttrs mkHomeConfigurations config.nixosConfigurations
+      );
 
       nixosConfigurations = mapAttrs mkNixOSConfiguration config.nixosConfigurations;
     };
