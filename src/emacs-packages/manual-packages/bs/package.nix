@@ -1,6 +1,7 @@
 {
   fetchgit,
   lib,
+  tabspaces,
   trivialBuild,
   ...
 }:
@@ -14,8 +15,8 @@ let
 
   src = fetchgit {
     url = "https://codeberg.org/bingshan/emacs-bs.git";
-    rev = "4dd51e7f845e79f66da8388eb749a0e691817f9e";
-    hash = "sha256-woNLydnmciEyzzxl75cr+NAnt6P/yaylHnYsmR8CMTc=";
+    rev = "4a40488c3ecbb77ac93f1228d362465e5bc4e769";
+    hash = "sha256-6j3yia7StaPYibhZmgEJvpQhIQkoOBxfN+QfCneHl2Y=";
   };
 
   meta = {
@@ -36,5 +37,7 @@ trivialBuild rec {
 
   buildInputs = propagatedUserEnvPkgs;
 
-  propagatedUserEnvPkgs = [ ];
+  propagatedUserEnvPkgs = [
+    tabspaces
+  ];
 }
