@@ -3,32 +3,33 @@
 
 ((nil
   .
-  ((sentence-end-double-space . t)
+  ((sentence-end-double-space . t)))
 
-   ;; Treat project-specific terminology as first-class vocabulary so
-   ;; spell checking focuses on genuine mistakes rather than
-   ;; repeatedly flagging domain terms.
-   (jinx-dir-local-words . "
-Codeberg NixOS attrsets autoloads bs config configFile dev devShell
-devShells devshell devshells dirToAttrs direnv disko
-diskoConfigurations diskoFile emacs enableDisko enableFacter
-enableHomeManager env facter facterReportFile filesystem flymake
-github gitignore infix json lefthook lf linux macrostep manualPackages
-melpa melpaPackages microsoft mkdir mktemp nixago nixfmt nixos
-nixosConfigurations nixosModules nixpkgs numtide pipefail preInstall
-preUnpack posframe postInstall postUnpack readtables rebase rtf
-runHook shellHook src tempdir toml treefmt truetype ttc ttf untracked
-usr utf utils wim xargs yaml yml")))
+ (lisp-data-mode
+  .
+  ((eval
+    .
+    (progn
+      (setq-local apheleia-formatter 'lisp-indent)))))
+
+ (markdown-ts-mode
+  .
+  ((eval
+    .
+    (progn
+      (setq-local apheleia-formatters
+                  (copy-tree apheleia-formatters))
+      (setf (alist-get 'mdformat apheleia-formatters)
+            '("mdformat"
+              "--wrap" "80"
+              "--extensions" "frontmatter"
+              "-"))
+      (setq-local apheleia-formatter 'mdformat)))))
 
  (nix-mode
   .
-  ;; Enforce a narrow, consistent formatting style for Nix code in
-  ;; this project, keeping expressions compact and visually uniform.
   ((apheleia-formatters . ((nixfmt "nixfmt" "--width" "50")))))
 
  (nix-ts-mode
   .
-  ;; Apply the same formatting constraints to Tree-sitter-based Nix
-  ;; buffers, ensuring consistency regardless of the active major
-  ;; mode.
   ((apheleia-formatters . ((nixfmt "nixfmt" "--width" "50"))))))

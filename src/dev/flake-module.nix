@@ -86,15 +86,8 @@ in
 
                 shell_environment_policy = {
                   "inherit" = "all";
-
-                  exclude = [ ];
-
                   experimental_use_profile = false;
                   ignore_default_excludes = false;
-
-                  include_only = [ ];
-
-                  set = { };
                 };
               };
 
@@ -125,6 +118,13 @@ in
                   indent_style = "space";
                   indent_size = "unset";
                   tab_width = 2;
+                };
+
+                "*.md" = {
+                  indent_size = 2;
+                  indent_style = "space";
+                  max_line_length = 80;
+                  trim_trailing_whitespace = false;
                 };
 
                 "*.nix" = {
@@ -241,6 +241,19 @@ in
             treefmt = {
               data = {
                 formatter = {
+                  markdown = {
+                    command = "mdformat";
+
+                    includes = [
+                      "*.md"
+                    ];
+
+                    options = [
+                      "--extensions=frontmatter"
+                      "--wrap=80"
+                    ];
+                  };
+
                   nix = {
                     command = "nixfmt";
 
@@ -258,10 +271,20 @@ in
               format = "toml";
               output = "treefmt.toml";
 
-              packages = with pkgs; [
-                nixfmt
-                treefmt
-              ];
+              packages =
+                let
+                  mdformatWithPlugins = pkgs.mdformat.withPlugins (
+                    ps: with ps; [
+                      mdformat-frontmatter
+                    ]
+                  );
+                in
+                with pkgs;
+                [
+                  mdformatWithPlugins
+                  nixfmt
+                  treefmt
+                ];
             };
           };
 
