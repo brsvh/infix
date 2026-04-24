@@ -41,11 +41,20 @@ in
     }:
     {
       codex = {
-        MCPServers = with pkgs; [
-          mcp-nixos
-        ];
-
         enable = true;
+
+        mcp = {
+          nixos = {
+            package = pkgs.mcp-nixos;
+
+            settings = {
+              command = "mcp-nixos";
+              required = false;
+              startup_timeout_sec = 20;
+              tool_timeout_sec = 120;
+            };
+          };
+        };
 
         readme = {
           file = ./agents/readme.md;
@@ -75,15 +84,6 @@ in
             job_max_runtime_seconds = 1800;
             max_depth = 1;
             max_threads = 2;
-          };
-
-          mcp_servers = {
-            nixos = {
-              command = "mcp-nixos";
-              required = false;
-              startup_timeout_sec = 20;
-              tool_timeout_sec = 120;
-            };
           };
 
           sandbox_workspace_write = {
