@@ -66,6 +66,35 @@ let
       };
     };
 
+  mcpServerSubmodule =
+    {
+      ...
+    }:
+    {
+      options = {
+        package = mkOption {
+          default = null;
+
+          description = ''
+            MCP server package installed alongside the Codex CLI in the target
+            devshell. When unset, no package is added automatically.
+          '';
+
+          type = with types; nullOr package;
+        };
+
+        settings = mkOption {
+          default = { };
+
+          description = ''
+            MCP server settings merged into `settings.mcp_servers.<name>`.
+          '';
+
+          type = with types; attrsOf anything;
+        };
+      };
+    };
+
   codexOptions =
     {
       config,
@@ -98,22 +127,29 @@ let
           default = "default";
 
           description = ''
-            The devshell receiving generated Codex files, startup hooks, and
-            skill runtime dependencies.
+            The devshell receiving generated Codex files, startup hooks, MCP
+            server packages, and skill runtime dependencies.
           '';
 
           type = types.str;
         };
 
-        MCPServers = mkOption {
-          default = [ ];
+        mcp = mkOption {
+          default = { };
 
           description = ''
-            MCP server packages installed alongside the Codex CLI in the target
-            devshell.
+            MCP server definitions merged into `settings.mcp_servers` and
+            installed alongside the Codex CLI in the target devshell when a
+            package is configured.
           '';
 
-          type = with types; listOf package;
+          type =
+            with types;
+            lazyAttrsOf (submoduleWith {
+              modules = [
+                mcpServerSubmodule
+              ];
+            });
         };
 
         readme = {
@@ -177,9 +213,17 @@ let
                     config.readme.path
                   ]
                 );
+
+              settingsMcpServers = data.mcp_servers or { };
+
+              declaredMcpServers = mapAttrs (
+                _: serverConfig: serverConfig.settings
+              ) config.mcp;
             in
             data
             // {
+              mcp_servers =
+                settingsMcpServers // declaredMcpServers;
               project_doc_fallback_filenames = fallbackDocPaths;
             };
 
@@ -255,6 +299,12 @@ in
         skillRuntimePackages = flatten (
           map (skill: skill.packages) (
             attrValues codex.skills
+          )
+        );
+
+        mcpPackages = filter (package: package != null) (
+          map (server: server.package) (
+            attrValues codex.mcp
           )
         );
 
@@ -345,7 +395,7 @@ in
                   packages = [
                     cliPackage
                   ]
-                  ++ codex.MCPServers;
+                  ++ mcpPackages;
                 };
               };
 
