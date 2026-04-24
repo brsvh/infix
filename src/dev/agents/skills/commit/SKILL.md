@@ -35,14 +35,14 @@ available.
 
 ## Repository rules
 
-Follow `.agents/doc/commit-message-style.md`.
+Follow `.agents/docs/commit-message-style.md`.
 
 Hard requirements:
 
 - describe staged changes only;
 - use only `scope: Verb summary` or `scope: subscope: Verb summary`;
 - derive scope from staged paths and staged diff;
-- when staged changes are under `src/packages/<category>/<package>/`, use
+- when staged changes are under `src/<category-packages>/<package>/`, use
   `<package>` as `scope` and omit `subscope`;
 - keep scope tokens lowercase;
 - use an imperative capitalized verb;

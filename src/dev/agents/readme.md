@@ -30,7 +30,7 @@
 
 ## Commit message rules
 
-- Follow `.agents/doc/commit-message-style.md`.
+- Follow `.agents/docs/commit-message-style.md`.
 - Describe staged changes only.
 - Use only `scope: Verb summary` or `scope: subscope: Verb summary`.
 - Derive scope from staged paths and staged diff.

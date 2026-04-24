@@ -69,9 +69,12 @@ Apply the following rules in order:
 
    - This rule overrides all remaining non-`doc` scope rules.
 
-1. Otherwise, collect staged paths matching `^src/packages/[^/]+/([^/]+)/`.
+1. Otherwise, collect staged paths matching
+   `^src/(?:(?:[^/]+-)?packages/)+([^/]+)/`.
 
-   - Extract `<package>` from `src/packages/<category>/<package>/`.
+   - Extract `<package>` from `src/<category-packages>/<package>/...`.
+   - Here `<category-packages>` is the package-collection prefix under `src`. It
+     may be `packages`, `emacs-packages/manual-packages`, or similar.
    - If one value clearly dominates, use `<package>` as the top-level scope.
    - When this rule applies, treat the package name as the full scope rather
      than as a subscope under `packages`.
@@ -117,7 +120,7 @@ Rules:
    content outside `.agents/skills/`, or multiple skill directories under
    `.agents/skills/`, then omit the subscope.
 
-1. If `scope` was derived from `src/packages/<category>/<package>/`, omit the
+1. If `scope` was derived from `src/<category-packages>/<package>/...`, omit the
    subscope.
 
 1. For non-`agents` scopes, use a subscope only when one stable component under
