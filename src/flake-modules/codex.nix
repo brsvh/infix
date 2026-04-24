@@ -14,8 +14,10 @@ let
     concatStringsSep
     dirOf
     escapeShellArg
+    filter
     filterAttrs
     flatten
+    hasPrefix
     isAttrs
     map
     mapAttrs
@@ -38,7 +40,7 @@ let
     else
       value;
 
-  codexSkillOptions =
+  skillSubmodule =
     {
       ...
     }:
@@ -81,17 +83,15 @@ let
           type = types.bool;
         };
 
-        stateVersion = mkOption {
-          default = "0.118.0";
+        package = mkOption {
+          default = null;
 
           description = ''
-            Describes the Codex version targeted by the current module.
-
-            This is informational for now, and reserved for future
-            compatibility guards.
+            Codex CLI package installed in the target devshell. When unset,
+            `pkgs.codex` is used.
           '';
 
-          type = types.str;
+          type = with types; nullOr package;
         };
 
         devshellName = mkOption {
@@ -139,6 +139,18 @@ let
           };
         };
 
+        docs = {
+          directory = mkOption {
+            default = null;
+
+            description = ''
+              Source directory linked into `.agents/docs`.
+            '';
+
+            type = types.nullOr types.path;
+          };
+        };
+
         settings = mkOption {
           default = { };
 
@@ -149,13 +161,18 @@ let
           apply =
             data:
             let
-              projectDocFallbackFilenames =
+              fallbackDocPaths =
                 let
-                  configured =
+                  configuredPaths =
                     data.project_doc_fallback_filenames or [ ];
                 in
                 unique (
-                  (if configured == null then [ ] else configured)
+                  (
+                    if configuredPaths == null then
+                      [ ]
+                    else
+                      configuredPaths
+                  )
                   ++ [
                     config.readme.path
                   ]
@@ -163,8 +180,7 @@ let
             in
             data
             // {
-              project_doc_fallback_filenames =
-                projectDocFallbackFilenames;
+              project_doc_fallback_filenames = fallbackDocPaths;
             };
 
           type = with types; attrsOf anything;
@@ -181,7 +197,7 @@ let
             with types;
             lazyAttrsOf (submoduleWith {
               modules = [
-                codexSkillOptions
+                skillSubmodule
               ];
             });
         };
@@ -201,30 +217,50 @@ in
         ...
       }:
       let
-        codexConfig = config.codex;
+        codex = config.codex;
+        docsLinkPath = ".agents/docs";
 
-        projectDocFallbackFilenames =
-          codexConfig.settings.project_doc_fallback_filenames;
+        cliPackage =
+          if codex.package == null then
+            pkgs.codex
+          else
+            codex.package;
 
-        settingsData =
+        fallbackDocPaths =
+          codex.settings.project_doc_fallback_filenames;
+
+        configFileData =
           let
-            data = pruneNulls codexConfig.settings;
+            data = pruneNulls codex.settings;
           in
           if data == null then { } else data;
 
-        projectDocDirectories = unique (
-          map dirOf projectDocFallbackFilenames
-        );
+        fallbackDocDirectories =
+          let
+            candidateDirectories = unique (
+              map dirOf fallbackDocPaths
+            );
+          in
+          if codex.docs.directory == null then
+            candidateDirectories
+          else
+            filter (
+              directory:
+              !(
+                directory == docsLinkPath
+                || hasPrefix "${docsLinkPath}/" directory
+              )
+            ) candidateDirectories;
 
-        skillPackages = flatten (
+        skillRuntimePackages = flatten (
           map (skill: skill.packages) (
-            attrValues codexConfig.skills
+            attrValues codex.skills
           )
         );
 
-        skillNames = attrNames codexConfig.skills;
+        skillNames = attrNames codex.skills;
 
-        skillStartupText = concatStringsSep "\n" (
+        skillLinksScript = concatStringsSep "\n" (
           (
             if skillNames != [ ] then
               [ "mkdir -p ${escapeShellArg ".agents/skills"}" ]
@@ -256,13 +292,26 @@ in
           ++ map (
             name:
             let
-              skill = codexConfig.skills.${name};
+              skillConfig = codex.skills.${name};
             in
-            "ln -snf ${escapeShellArg (toString skill.directory)} ${escapeShellArg ".agents/skills/${name}"}"
+            "ln -snf ${escapeShellArg (toString skillConfig.directory)} ${escapeShellArg ".agents/skills/${name}"}"
           ) skillNames
         );
 
-        targetDevshell = codexConfig.devshellName;
+        docsLinkScript =
+          if codex.docs.directory == null then
+            ''
+              if [ -L ${escapeShellArg docsLinkPath} ]; then
+                rm -f ${escapeShellArg docsLinkPath}
+              fi
+            ''
+          else
+            ''
+              mkdir -p ${escapeShellArg (dirOf docsLinkPath)}
+              ln -snf ${escapeShellArg (toString codex.docs.directory)} ${escapeShellArg docsLinkPath}
+            '';
+
+        devshellName = codex.devshellName;
       in
       {
         options = {
@@ -284,34 +333,34 @@ in
           };
         };
 
-        config = mkIf codexConfig.enable {
+        config = mkIf codex.enable {
           devshells = {
-            ${targetDevshell} = {
+            ${devshellName} = {
               ago = {
                 codex = {
-                  data = settingsData;
+                  data = configFileData;
                   format = "toml";
                   output = ".codex/config.toml";
 
                   packages = [
-                    pkgs.codex
+                    cliPackage
                   ]
-                  ++ codexConfig.MCPServers;
+                  ++ codex.MCPServers;
                 };
               };
 
               devshell = mkMerge [
                 {
-                  packages = skillPackages;
+                  packages = skillRuntimePackages;
                 }
 
-                (mkIf (projectDocDirectories != [ ]) {
+                (mkIf (fallbackDocDirectories != [ ]) {
                   startup = {
-                    "codex-project-doc" = {
+                    "codex-doc-directories" = {
                       text = concatStringsSep "\n" (
                         map (
                           directory: "mkdir -p ${escapeShellArg directory}"
-                        ) projectDocDirectories
+                        ) fallbackDocDirectories
                       );
                     };
                   };
@@ -319,23 +368,27 @@ in
 
                 {
                   startup = {
-                    "codex-readme" = {
+                    "codex-doc-link" = {
+                      text = docsLinkScript;
+                    };
+
+                    "codex-readme-link" = {
                       text =
-                        if codexConfig.readme.file == null then
+                        if codex.readme.file == null then
                           ''
-                            if [ -L ${escapeShellArg codexConfig.readme.path} ]; then
-                              rm -f ${escapeShellArg codexConfig.readme.path}
+                            if [ -L ${escapeShellArg codex.readme.path} ]; then
+                              rm -f ${escapeShellArg codex.readme.path}
                             fi
                           ''
                         else
                           ''
-                            mkdir -p ${escapeShellArg (dirOf codexConfig.readme.path)}
-                            ln -snf ${escapeShellArg (toString codexConfig.readme.file)} ${escapeShellArg codexConfig.readme.path}
+                            mkdir -p ${escapeShellArg (dirOf codex.readme.path)}
+                            ln -snf ${escapeShellArg (toString codex.readme.file)} ${escapeShellArg codex.readme.path}
                           '';
                     };
 
-                    "codex-skills" = {
-                      text = skillStartupText;
+                    "codex-skill-links" = {
+                      text = skillLinksScript;
                     };
                   };
                 }
