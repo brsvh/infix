@@ -4,8 +4,13 @@
   ...
 }:
 let
+  inherit (builtins)
+    path
+    ;
+
   inherit (flake-parts-lib)
     mkPerSystemOption
+    mkTransposedPerSystemModule
     ;
 
   inherit (lib)
@@ -21,11 +26,14 @@ let
     isAttrs
     map
     mapAttrs
+    mapAttrs'
     mkIf
     mkMerge
     mkOption
+    nameValuePair
     types
     unique
+    unsafeDiscardStringContext
     ;
 
   pruneNulls =
@@ -64,6 +72,22 @@ let
           type = with types; listOf package;
         };
       };
+    };
+
+  mkSkillsOption =
+    description:
+    mkOption {
+      default = { };
+
+      inherit description;
+
+      type =
+        with types;
+        lazyAttrsOf (submoduleWith {
+          modules = [
+            skillSubmodule
+          ];
+        });
     };
 
   mcpServerSubmodule =
@@ -230,27 +254,25 @@ let
           type = with types; attrsOf anything;
         };
 
-        skills = mkOption {
-          default = { };
-
-          description = ''
-            Skill directories linked into `.agents/skills`.
-          '';
-
-          type =
-            with types;
-            lazyAttrsOf (submoduleWith {
-              modules = [
-                skillSubmodule
-              ];
-            });
-        };
+        skills = mkSkillsOption ''
+          Skill directories linked into `.agents/skills`.
+        '';
       };
     };
 in
 {
   imports = [
     ./devshell.nix
+    (mkTransposedPerSystemModule {
+      file = ./codex.nix;
+
+      name = "skills";
+
+      option = mkSkillsOption ''
+        Skill definitions exposed at `skills.''${system}` for reuse by other
+        flakes. This module populates them from `perSystem.codex.skills`.
+      '';
+    })
   ];
 
   options = {
@@ -309,6 +331,21 @@ in
         );
 
         skillNames = attrNames codex.skills;
+
+        exportedSkills = mapAttrs' (
+          name: skill:
+          nameValuePair name (
+            skill
+            // {
+              directory =
+                /.
+                + unsafeDiscardStringContext (path {
+                  path = skill.directory;
+                  name = "codex-skill-${name}";
+                });
+            }
+          )
+        ) codex.skills;
 
         skillLinksScript = concatStringsSep "\n" (
           (
@@ -383,69 +420,75 @@ in
           };
         };
 
-        config = mkIf codex.enable {
-          devshells = {
-            ${devshellName} = {
-              ago = {
-                codex = {
-                  data = configFileData;
-                  format = "toml";
-                  output = ".codex/config.toml";
+        config = mkMerge [
+          {
+            skills = exportedSkills;
+          }
 
-                  packages = [
-                    cliPackage
-                  ]
-                  ++ mcpPackages;
+          (mkIf codex.enable {
+            devshells = {
+              ${devshellName} = {
+                ago = {
+                  codex = {
+                    data = configFileData;
+                    format = "toml";
+                    output = ".codex/config.toml";
+
+                    packages = [
+                      cliPackage
+                    ]
+                    ++ mcpPackages;
+                  };
                 };
+
+                devshell = mkMerge [
+                  {
+                    packages = skillRuntimePackages;
+                  }
+
+                  (mkIf (fallbackDocDirectories != [ ]) {
+                    startup = {
+                      "codex-doc-directories" = {
+                        text = concatStringsSep "\n" (
+                          map (
+                            directory: "mkdir -p ${escapeShellArg directory}"
+                          ) fallbackDocDirectories
+                        );
+                      };
+                    };
+                  })
+
+                  {
+                    startup = {
+                      "codex-doc-link" = {
+                        text = docsLinkScript;
+                      };
+
+                      "codex-readme-link" = {
+                        text =
+                          if codex.readme.file == null then
+                            ''
+                              if [ -L ${escapeShellArg codex.readme.path} ]; then
+                                rm -f ${escapeShellArg codex.readme.path}
+                              fi
+                            ''
+                          else
+                            ''
+                              mkdir -p ${escapeShellArg (dirOf codex.readme.path)}
+                              ln -snf ${escapeShellArg (toString codex.readme.file)} ${escapeShellArg codex.readme.path}
+                            '';
+                      };
+
+                      "codex-skill-links" = {
+                        text = skillLinksScript;
+                      };
+                    };
+                  }
+                ];
               };
-
-              devshell = mkMerge [
-                {
-                  packages = skillRuntimePackages;
-                }
-
-                (mkIf (fallbackDocDirectories != [ ]) {
-                  startup = {
-                    "codex-doc-directories" = {
-                      text = concatStringsSep "\n" (
-                        map (
-                          directory: "mkdir -p ${escapeShellArg directory}"
-                        ) fallbackDocDirectories
-                      );
-                    };
-                  };
-                })
-
-                {
-                  startup = {
-                    "codex-doc-link" = {
-                      text = docsLinkScript;
-                    };
-
-                    "codex-readme-link" = {
-                      text =
-                        if codex.readme.file == null then
-                          ''
-                            if [ -L ${escapeShellArg codex.readme.path} ]; then
-                              rm -f ${escapeShellArg codex.readme.path}
-                            fi
-                          ''
-                        else
-                          ''
-                            mkdir -p ${escapeShellArg (dirOf codex.readme.path)}
-                            ln -snf ${escapeShellArg (toString codex.readme.file)} ${escapeShellArg codex.readme.path}
-                          '';
-                    };
-
-                    "codex-skill-links" = {
-                      text = skillLinksScript;
-                    };
-                  };
-                }
-              ];
             };
-          };
-        };
+          })
+        ];
       }
     );
   };

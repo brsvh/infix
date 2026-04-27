@@ -204,6 +204,7 @@
         partitionedAttrs = {
           devShells = "dev";
           formatter = "dev";
+          skills = "dev";
         };
 
         partitions = {
