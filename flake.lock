@@ -1,33 +1,12 @@
 {
   "nodes": {
-    "flake-parts": {
-      "inputs": {
-        "nixpkgs-lib": [
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1775087534,
-        "narHash": "sha256-91qqW8lhL7TLwgQWijoGBbiD4t7/q75KTi8NxjVmSmA=",
-        "ref": "main",
-        "rev": "3107b77cd68437b9a76194f0f7f9c55f2329ca5b",
-        "revCount": 448,
-        "type": "git",
-        "url": "https://github.com/hercules-ci/flake-parts.git"
-      },
-      "original": {
-        "ref": "main",
-        "type": "git",
-        "url": "https://github.com/hercules-ci/flake-parts.git"
-      }
-    },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1775579569,
-        "narHash": "sha256-/m3yyS/EnXqoPGBJYVy4jTOsirdgsEZ3JdN2gGkBr14=",
+        "lastModified": 1778274207,
+        "narHash": "sha256-I4puXmX1iovcCHZlRmztO3vW0mAbbRvq4F8wgIMQ1MM=",
         "ref": "nixpkgs-unstable",
-        "rev": "dfd9566f82a6e1d55c30f861879186440614696e",
-        "revCount": 976687,
+        "rev": "b3da656039dc7a6240f27b2ef8cc6a3ef3bccae7",
+        "revCount": 994919,
         "type": "git",
         "url": "https://github.com/NixOS/nixpkgs.git"
       },
@@ -39,7 +18,6 @@
     },
     "root": {
       "inputs": {
-        "flake-parts": "flake-parts",
         "nixpkgs": "nixpkgs"
       }
     }

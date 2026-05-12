@@ -14,7 +14,11 @@ let
         ]
       );
 
-  script = writeText "emacs-lisp-formatter.el" ''
+  script = writeText "elisp-format.el" ''
+    (require 'cl-lib)
+    (require 'editorconfig)
+    (require 'editorconfig-tools nil t)
+
     (setq auto-save-default nil
           backup-inhibited t
           before-save-hook nil
@@ -24,10 +28,6 @@ let
           make-backup-files nil
           save-silently t
           vc-follow-symlinks t)
-
-    (require 'cl-lib)
-    (require 'editorconfig)
-    (require 'editorconfig-tools nil t)
 
     (unless (assq 'lisp-data-mode editorconfig-indentation-alist)
       (push
@@ -42,7 +42,7 @@ let
     (defun elisp-format--die (message-format &rest args)
       (princ
        (apply #'format
-        (concat "emacs-lisp-formatter: " message-format "\n")
+        (concat "elisp-format: " message-format "\n")
         args)
        'external-debugging-output)
       (kill-emacs 1))
@@ -157,6 +157,6 @@ let
           (elisp-format--input-files))
   '';
 in
-writeShellScriptBin "emacs-lisp-formatter" ''
+writeShellScriptBin "elisp-format" ''
   exec ${emacs}/bin/emacs --quick --script ${script} -- "$@"
 ''
