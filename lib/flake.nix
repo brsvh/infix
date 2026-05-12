@@ -4,6 +4,7 @@
 }:
 let
   inherit (builtins)
+    fetchTree
     getFlake
     ;
 
@@ -249,6 +250,8 @@ let
           && lockedInputMatches publicInput node.locked
         then
           publicInput
+        else if !(node.flake or true) then
+          fetchTree node.locked
         else
           getFlake (lockedInputRef node.locked);
     in

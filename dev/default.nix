@@ -49,6 +49,7 @@ in
         import devShell {
           inherit
             infix
+            inputs
             lib
             pkgs
             projectRoot

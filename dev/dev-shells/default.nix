@@ -1,9 +1,24 @@
 {
+  inputs,
   lib,
   pkgs,
+  projectRoot,
   ...
 }:
 let
+  inherit (inputs)
+    openai-skills
+    ;
+
+  inherit (inputs.agent-skills.lib.agent-skills)
+    allowlistFor
+    defaultLocalTargets
+    discoverCatalog
+    mkBundle
+    mkShellHook
+    selectSkills
+    ;
+
   inherit (lib)
     attrNames
     baseNameOf
@@ -30,6 +45,64 @@ let
     mkShell
     writeText
     ;
+
+  skillSources = {
+    infix = {
+      idPrefix = "infix";
+      path = projectRoot;
+      subdir = "dev/agents/skills";
+    };
+
+    openai = {
+      idPrefix = "openai";
+      path = "${openai-skills}";
+      subdir = "skills/.curated";
+    };
+  };
+
+  skillCatalog = discoverCatalog skillSources;
+
+  skillAllowlist = allowlistFor {
+    catalog = skillCatalog;
+
+    enable = [
+      "infix/commit"
+      "openai/cli-creator"
+    ];
+
+    sources = skillSources;
+  };
+
+  skillSelection = selectSkills {
+    allowlist = skillAllowlist;
+    catalog = skillCatalog;
+    sources = skillSources;
+
+    skills = { };
+  };
+
+  skillBundle = mkBundle {
+    inherit
+      pkgs
+      ;
+
+    selection = skillSelection;
+  };
+
+  skillLocalTargets = {
+    codex = defaultLocalTargets.codex // {
+      enable = true;
+    };
+  };
+
+  skillShellHook = mkShellHook {
+    inherit
+      pkgs
+      ;
+
+    bundle = skillBundle;
+    targets = skillLocalTargets;
+  };
 
   mkFile = request: request.engine request;
 
@@ -79,7 +152,96 @@ let
         name
       ];
 
+  toml =
+    request:
+    let
+      inherit (request)
+        data
+        output
+        ;
+    in
+    (pkgs.formats.toml { }).generate
+      (baseNameOf output)
+      data;
+
+  yaml =
+    request:
+    let
+      inherit (request)
+        data
+        output
+        ;
+    in
+    (pkgs.formats.yaml { }).generate
+      (baseNameOf output)
+      data;
+
   files = {
+    codex = {
+      data = {
+        approval_policy = "on-request";
+        model = "gpt-5.5";
+        model_provider = "openai";
+        model_reasoning_effort = "xhigh";
+        model_reasoning_summary = "auto";
+        model_verbosity = "high";
+        personality = "pragmatic";
+        plan_mode_reasoning_effort = "xhigh";
+
+        project_doc_fallback_filenames = [
+          "dev/agents/AGENTS.md"
+        ];
+
+        project_doc_max_bytes = 32768;
+        review_model = "gpt-5.4";
+        sandbox_mode = "workspace-write";
+        web_search = "cached";
+
+        agents = {
+          job_max_runtime_seconds = 1800;
+          max_depth = 1;
+          max_threads = 2;
+        };
+
+        mcp_servers = {
+          nixos = {
+            command = "mcp-nixos";
+            required = false;
+            startup_timeout_sec = 20;
+            tool_timeout_sec = 120;
+          };
+        };
+
+        sandbox_workspace_write = {
+          exclude_slash_tmp = false;
+          exclude_tmpdir_env_var = false;
+          network_access = false;
+          writable_roots = [ ];
+        };
+
+        shell_environment_policy = {
+          "inherit" = "all";
+
+          exclude = [ ];
+
+          experimental_use_profile = false;
+          ignore_default_excludes = false;
+
+          include_only = [ ];
+
+          set = { };
+        };
+      };
+
+      engine = toml;
+      output = ".codex/config.toml";
+
+      packages = with pkgs; [
+        codex
+        mcp-nixos
+      ];
+    };
+
     editorconfig = {
       data = {
         root = true;
@@ -169,17 +331,7 @@ let
         "treefmt"
       ];
 
-      engine =
-        request:
-        let
-          inherit (request)
-            data
-            output
-            ;
-        in
-        (pkgs.formats.yaml { }).generate
-          (baseNameOf output)
-          data;
+      engine = yaml;
 
       hook = {
         extra =
@@ -271,18 +423,7 @@ let
         };
       };
 
-      engine =
-        request:
-        let
-          inherit (request)
-            data
-            output
-            ;
-        in
-        (pkgs.formats.toml { }).generate
-          (baseNameOf output)
-          data;
-
+      engine = toml;
       output = "treefmt.toml";
 
       packages =
@@ -317,6 +458,8 @@ mkShell {
   shellHook = concatStringsSep "\n" (
     [
       ''projectRoot="$(${getExe git} rev-parse --show-toplevel)"''
+      ''export AGENT_SKILLS_ROOT="$projectRoot"''
+      skillShellHook
     ]
     ++ map (name: installWithHook files.${name}) names
   );

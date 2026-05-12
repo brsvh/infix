@@ -1,5 +1,29 @@
 {
   "nodes": {
+    "agent-skills": {
+      "inputs": {
+        "home-manager": [
+          "home-manager"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1777875835,
+        "narHash": "sha256-+ghBYIh477YxDPd0sKeD4AwnKJSOXKT0nHuAAGHL1cQ=",
+        "ref": "master",
+        "rev": "c6cb03f84cda0dc3f5daa05bf4d49f56c182f690",
+        "revCount": 75,
+        "type": "git",
+        "url": "https://github.com/Kyure-A/agent-skills-nix.git"
+      },
+      "original": {
+        "ref": "master",
+        "type": "git",
+        "url": "https://github.com/Kyure-A/agent-skills-nix.git"
+      }
+    },
     "blank": {
       "locked": {
         "lastModified": 1625557891,
@@ -16,25 +40,25 @@
         "url": "https://github.com/divnix/blank.git"
       }
     },
-    "flake-utils": {
+    "home-manager": {
       "inputs": {
-        "systems": [
-          "systems"
+        "nixpkgs": [
+          "nixpkgs"
         ]
       },
       "locked": {
-        "lastModified": 1731533236,
-        "narHash": "sha256-l0KFg5HjrsfsO/JpG+r7fRrqm12kzFHyUHqHCVpMMbI=",
-        "owner": "numtide",
-        "repo": "flake-utils",
-        "rev": "11707dc2f618dd54ca8739b309ec4fc024de578b",
-        "type": "github"
+        "lastModified": 1778535464,
+        "narHash": "sha256-kkUQYSv70wynJ/DfnGals6r98I6bK3CVNVTN1zbAd7Y=",
+        "ref": "master",
+        "rev": "b659c7ffd40fc9e3bb60d420c79c67e769b9f4ab",
+        "revCount": 6712,
+        "type": "git",
+        "url": "https://github.com/nix-community/home-manager.git"
       },
       "original": {
-        "owner": "numtide",
-        "ref": "main",
-        "repo": "flake-utils",
-        "type": "github"
+        "ref": "master",
+        "type": "git",
+        "url": "https://github.com/nix-community/home-manager.git"
       }
     },
     "nix-unit": {
@@ -64,62 +88,6 @@
         "url": "https://github.com/nix-community/nix-unit.git"
       }
     },
-    "nixago": {
-      "inputs": {
-        "flake-utils": [
-          "flake-utils"
-        ],
-        "nixago-exts": [
-          "nixago-extensions"
-        ],
-        "nixpkgs": [
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1746801636,
-        "narHash": "sha256-dlcKfIXp/eqFHzFm+DzseXAWWlpVwyk9cTvCKGtVKkw=",
-        "ref": "master",
-        "rev": "8cc33f973ab3a891d8a41391e73ef451a783960b",
-        "revCount": 106,
-        "type": "git",
-        "url": "https://github.com/nix-community/nixago.git"
-      },
-      "original": {
-        "ref": "master",
-        "type": "git",
-        "url": "https://github.com/nix-community/nixago.git"
-      }
-    },
-    "nixago-extensions": {
-      "inputs": {
-        "flake-utils": [
-          "nixago",
-          "flake-utils"
-        ],
-        "nixago": [
-          "nixago"
-        ],
-        "nixpkgs": [
-          "nixago",
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1676070308,
-        "narHash": "sha256-QaJ65oc2l8iwQIGWUJ0EKjCeSuuCM/LqR8RauxZUUkc=",
-        "ref": "master",
-        "rev": "e5380cb0456f4ea3c86cf94e3039eb856bf07d0b",
-        "revCount": 7,
-        "type": "git",
-        "url": "https://github.com/nix-community/nixago-extensions.git"
-      },
-      "original": {
-        "ref": "master",
-        "type": "git",
-        "url": "https://github.com/nix-community/nixago-extensions.git"
-      }
-    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1778274207,
@@ -136,31 +104,31 @@
         "url": "https://github.com/NixOS/nixpkgs.git"
       }
     },
-    "root": {
-      "inputs": {
-        "blank": "blank",
-        "flake-utils": "flake-utils",
-        "nix-unit": "nix-unit",
-        "nixago": "nixago",
-        "nixago-extensions": "nixago-extensions",
-        "nixpkgs": "nixpkgs",
-        "systems": "systems"
-      }
-    },
-    "systems": {
+    "openai-skills": {
+      "flake": false,
       "locked": {
-        "lastModified": 1680978846,
-        "narHash": "sha256-Gtqg8b/v49BFDpDetjclCYXm8mAnTrUzR0JnE2nv5aw=",
+        "lastModified": 1778090515,
+        "narHash": "sha256-EJIWRKs8m0cQ1EsFdusDgaeCqpxc7//1XH4Rm/ED35s=",
         "ref": "main",
-        "rev": "2ecfcac5e15790ba6ce360ceccddb15ad16d08a8",
-        "revCount": 3,
+        "rev": "4c4058ebf44f6734e62c70ab4a81246d4d093fc8",
+        "revCount": 107,
         "type": "git",
-        "url": "https://github.com/nix-systems/x86_64-linux.git"
+        "url": "https://github.com/openai/skills.git"
       },
       "original": {
         "ref": "main",
         "type": "git",
-        "url": "https://github.com/nix-systems/x86_64-linux.git"
+        "url": "https://github.com/openai/skills.git"
+      }
+    },
+    "root": {
+      "inputs": {
+        "agent-skills": "agent-skills",
+        "blank": "blank",
+        "home-manager": "home-manager",
+        "nix-unit": "nix-unit",
+        "nixpkgs": "nixpkgs",
+        "openai-skills": "openai-skills"
       }
     }
   },

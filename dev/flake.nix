@@ -1,17 +1,31 @@
 {
   inputs = {
+    agent-skills = {
+      inputs = {
+        home-manager = {
+          follows = "home-manager";
+        };
+
+        nixpkgs = {
+          follows = "nixpkgs";
+        };
+      };
+
+      url = "git+https://github.com/Kyure-A/agent-skills-nix.git?ref=master";
+    };
+
     blank = {
       url = "git+https://github.com/divnix/blank.git?ref=master";
     };
 
-    flake-utils = {
+    home-manager = {
       inputs = {
-        systems = {
-          follows = "systems";
+        nixpkgs = {
+          follows = "nixpkgs";
         };
       };
 
-      url = "github:numtide/flake-utils/main";
+      url = "git+https://github.com/nix-community/home-manager.git?ref=master";
     };
 
     nix-unit = {
@@ -34,6 +48,11 @@
 
     nixpkgs = {
       url = "git+https://github.com/NixOS/nixpkgs.git?ref=nixpkgs-unstable";
+    };
+
+    openai-skills = {
+      flake = false;
+      url = "git+https://github.com/openai/skills.git?ref=main";
     };
   };
 
