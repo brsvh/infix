@@ -1,0 +1,105 @@
+# README --- infix README  -*- coding: utf-8; mode: org; -*-
+
+#+title: infix
+
+*This work still in progress*.
+
+~infix~ is a small reusable Nix layer.
+
+* Getting Started
+
+Add ~infix~ to the consuming flake.  If the project already has a
+~nixpkgs~ input, make ~infix~ follow it so both flakes evaluate against
+the same package set.
+
+#+begin_src nix
+  {
+    inputs = {
+      nixpkgs.url = "git+https://github.com/NixOS/nixpkgs.git?ref=nixpkgs-unstable";
+      infix.url = "git+https://codeberg.org/bingshan/infix.git";
+      infix.inputs.nixpkgs.follows = "nixpkgs";
+    };
+  }
+#+end_src
+
+** Use the Package Overlays
+
+Use ~overlays.default~ when the consuming project wants packages from
+this repository under ~pkgs~.
+
+#+begin_src nix
+  pkgs = import nixpkgs {
+    inherit
+      system
+      ;
+
+    overlays = [
+      infix.overlays.default
+    ];
+  };
+#+end_src
+
+The default overlay is built from ~src/packages~.
+
+Use ~overlays.emacs-packages~ when the consuming project wants the Emacs
+package scope customizations from this repository.
+
+#+begin_src nix
+  pkgs = import nixpkgs {
+    inherit
+      system
+      ;
+
+    overlays = [
+      infix.overlays.emacs-packages
+    ];
+  };
+#+end_src
+
+The Emacs overlay extends ~emacsPackagesFor~ with manually packaged
+Emacs Lisp packages and a few MELPA package overrides.
+
+** Use the flake-parts Modules
+
+The exported ~flakeModules~ are intended for flake-parts users.  Import
+only the modules needed by the consuming flake.
+
+#+begin_src nix
+  outputs =
+    inputs@{
+      flake-parts,
+      infix,
+      ...
+    }:
+    flake-parts.lib.mkFlake
+      {
+        inherit
+          inputs
+          ;
+      }
+      {
+        imports = [
+          infix.flakeModules.nixosConfigurations
+        ];
+
+        systems = [
+          "x86_64-linux"
+        ];
+      };
+#+end_src
+
+* AI Assistance Disclosure
+
+Parts of the code, tests, and documentation in this project were
+developed with assistance from AI tools.  All AI-generated output was
+reviewed and modified by the maintainer where necessary.  The
+maintainer remains responsible for the final content.  No secrets,
+private user data, or other sensitive information were intentionally
+provided to AI tools.
+
+* License
+
+This project is released under the MIT License.  See
+https://spdx.org/licenses/MIT.html for the license text.
+
+# README ends here
