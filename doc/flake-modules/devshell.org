@@ -1,0 +1,879 @@
+#+title: flakeModules.devshell
+
+~devshell~ is a ~flake-parts~ module for projects that use ~devshell~[fn:1].
+
+It extends upstream ~devshell~ entries with two project-local features:
+
+- generated files linked into the project when the shell starts;
+- Agent Skills bundles installed into local agent-specific skill directories.
+
+The module is configured under ~perSystem.devshells~. Each
+~perSystem.devshells.<name>~ entry is still an upstream devshell module, so normal
+options such as ~devshell.packages~, ~commands~, ~env~, and ~devshell.startup~ remain
+available.
+
+For each configured shell, the module also exposes the final shell at the
+standard flake output path ~devShells.${system}.<name>~.
+
+* Installation
+
+If your flake already imports this repository as an input and exports
+~flakeModules.devshell~, add it to ~imports~ in the usual ~flake-parts~ style.
+
+The module requires a ~devshell~ input. The ~skills~ integration also requires an
+~agent-skills~[fn:2] input when it is configured.
+
+#+begin_src nix
+  {
+    inputs = {
+      agent-skills.url = "github:Kyure-A/agent-skills-nix";
+      devshell.url = "github:numtide/devshell";
+      flake-parts.url = "github:hercules-ci/flake-parts";
+      infix.url = "git+https://codeberg.org/bingshan/infix.git?ref=main";
+    };
+
+    outputs =
+      inputs@{
+        flake-parts,
+        infix,
+        ...
+      }:
+      flake-parts.lib.mkFlake { inherit inputs; } {
+        imports = [
+          infix.flakeModules.devshell
+        ];
+
+        systems = [
+          "x86_64-linux"
+        ];
+      };
+  }
+#+end_src
+
+After that, configure shells under ~perSystem.devshells~.
+
+* Quick Start
+
+The smallest useful configuration defines one upstream devshell:
+
+#+begin_src nix
+  {
+    perSystem =
+      { pkgs, ... }:
+      {
+        devshells.default = {
+          devshell = {
+            name = "example";
+
+            packages = with pkgs; [
+              git
+              ripgrep
+            ];
+          };
+        };
+      };
+  }
+#+end_src
+
+This creates ~devShells.${system}.default~ from
+~perSystem.devshells.default.devshell.shell~.
+
+* Generated Files
+
+Use ~perSystem.devshells.<name>.files~ to generate store files and link them into
+the project at shell startup.
+
+#+begin_src nix
+  {
+    perSystem =
+      { pkgs, ... }:
+      let
+        json = pkgs.formats.json { };
+        toml = pkgs.formats.toml { };
+      in
+      {
+        devshells.default = {
+          files = {
+            treefmt = {
+              path = "treefmt.toml";
+
+              generator =
+                data:
+                toml.generate "treefmt.toml" data;
+
+              data = {
+                formatter = {
+                  nixfmt = {
+                    command = "nixfmt";
+
+                    includes = [
+                      "*.nix"
+                    ];
+                  };
+                };
+              };
+
+              packages = with pkgs; [
+                nixfmt
+                treefmt
+              ];
+            };
+
+            editor-settings = {
+              path = ".config/example/settings.json";
+
+              generator =
+                data:
+                json.generate "example-settings.json" data;
+
+              data = {
+                formatter = "treefmt";
+                language = "nix";
+              };
+
+              deps = [
+                "treefmt"
+              ];
+            };
+          };
+        };
+      };
+  }
+#+end_src
+
+Each file entry becomes a devshell startup entry with the same name. In the
+example above, ~editor-settings~ depends on the ~treefmt~ startup entry.
+
+Packages declared under a file entry are collected into ~devshell.packages~. This
+makes tools needed by file hooks available in the development shell.
+
+* Agent Skills
+
+Use ~perSystem.devshells.<name>.skills~ to build an ~agent-skills-nix~ bundle and
+install it when the shell starts.
+
+The module uses the following ~agent-skills-nix~ library functions:
+
+- ~discoverCatalog~
+- ~allowlistFor~
+- ~selectSkills~
+- ~mkBundle~
+- ~mkShellHook~
+
+The recommended form uses named sources and explicit skills with ~from =
+"<source-name>"~.
+
+#+begin_src nix
+  {
+    perSystem =
+      { pkgs, ... }:
+      {
+        devshells.default = {
+          skills = {
+            sources = {
+              bingshan = {
+                idPrefix = "bingshan";
+                path = "${inputs.bingshan-skills}";
+                subdir = "skills";
+
+                enable = [
+                  "bingshan/gnu-style-commit"
+                ];
+              };
+
+              openai = {
+                idPrefix = "openai";
+                path = "${inputs.openai-skills}";
+                subdir = "skills/.curated";
+
+                filter = {
+                  maxDepth = 2;
+                  nameRegex = "cli-creator";
+                };
+              };
+            };
+
+            skills = {
+              nix-refactor = {
+                from = "bingshan";
+                path = "nix-code-refactor";
+                rename = "bingshan/nix-refactor";
+
+                packages = with pkgs; [
+                  nixfmt
+                ];
+              };
+
+              "openai/cli-creator" = {
+                from = "openai";
+                path = "cli-creator";
+
+                packages = with pkgs; [
+                  curl
+                  jq
+                ];
+
+                deps = [
+                  "nix-refactor"
+                ];
+              };
+            };
+
+            targets = {
+              agents = {
+                dest = ".agents/skills";
+                structure = "copy-tree";
+                enable = true;
+              };
+
+              codex = {
+                dest = ".codex/skills";
+                structure = "symlink-tree";
+                enable = true;
+              };
+            };
+          };
+        };
+      };
+  }
+#+end_src
+
+This configuration builds one bundle and installs it into both configured
+targets when the devshell starts.
+
+Relative target destinations are handled by the ~agent-skills-nix~ local install
+script. They are relative to ~AGENT_SKILLS_ROOT~ when that variable is set,
+otherwise to the current directory used by the script.
+
+* Complete Example
+
+The following example combines generated files, source-discovered skills,
+explicit skills, packages, transforms, and startup ordering:
+
+#+begin_src nix
+  {
+    inputs,
+    projectRoot,
+    ...
+  }:
+  {
+    perSystem =
+      { pkgs, ... }:
+      let
+        json = pkgs.formats.json { };
+        yaml = pkgs.formats.yaml { };
+      in
+      {
+        devshells.agent-workspace = {
+          devshell = {
+            name = "agent-workspace";
+
+            packages = with pkgs; [
+              jq
+              nil
+              ripgrep
+            ];
+          };
+
+          files = {
+            agent-routing = {
+              path = ".agents/config/routing.yaml";
+
+              generator =
+                data:
+                yaml.generate "agent-routing.yaml" data;
+
+              data = {
+                default_agent = "codex";
+
+                skills = {
+                  commit = "infix/commit";
+                  nix = "bingshan/nix-refactor";
+                  openai_cli = "openai/cli-creator";
+                };
+              };
+
+              deps = [
+                "agent-skills"
+              ];
+
+              packages = with pkgs; [
+                yq
+              ];
+
+              hook = ''
+                ${pkgs.yq}/bin/yq '.skills' \
+                  "$PRJ_ROOT/.agents/config/routing.yaml" >/dev/null
+              '';
+            };
+
+            codex-settings = {
+              path = ".codex/settings.json";
+
+              generator =
+                data:
+                json.generate "codex-settings.json" data;
+
+              data = {
+                model = "gpt-5.5";
+                reasoning_effort = "medium";
+              };
+
+              deps = [
+                "agent-skills"
+              ];
+            };
+          };
+
+          skills = {
+            sources = {
+              bingshan = {
+                idPrefix = "bingshan";
+                path = "${inputs.bingshan-skills}";
+                subdir = "skills";
+
+                enable = [
+                  "bingshan/gnu-style-commit"
+                ];
+              };
+
+              infix = {
+                idPrefix = "infix";
+                path = projectRoot;
+                subdir = "dev/agents/skills";
+
+                enable = [
+                  "infix/commit"
+                ];
+              };
+
+              openai = {
+                idPrefix = "openai";
+                path = "${inputs.openai-skills}";
+                subdir = "skills/.curated";
+
+                filter = {
+                  maxDepth = 2;
+                  nameRegex = "cli-creator";
+                };
+              };
+            };
+
+            skills = {
+              nix-refactor = {
+                from = "bingshan";
+                path = "nix-code-refactor";
+                rename = "bingshan/nix-refactor";
+
+                packages = with pkgs; [
+                  nixfmt
+                ];
+
+                transform =
+                  {
+                    original,
+                    dependencies,
+                  }:
+                  ''
+                    ${original}
+
+                    ${dependencies}
+
+                    ## Project Notes
+
+                    Run the repository formatter before reporting completion.
+                  '';
+              };
+
+              infix-commit = {
+                from = "infix";
+                path = "commit";
+                rename = "infix/commit";
+
+                deps = [
+                  "nix-refactor"
+                ];
+              };
+
+              "openai/cli-creator" = {
+                from = "openai";
+                path = "cli-creator";
+
+                packages = with pkgs; [
+                  curl
+                  jq
+                ];
+
+                deps = [
+                  "nix-refactor"
+                  "infix-commit"
+                ];
+              };
+            };
+
+            targets = {
+              agents = {
+                dest = ".agents/skills";
+                structure = "copy-tree";
+                enable = true;
+              };
+
+              codex = {
+                dest = ".codex/skills";
+                structure = "symlink-tree";
+                enable = true;
+              };
+            };
+
+            excludePatterns = [
+              "/.system"
+              "/.cache"
+            ];
+          };
+        };
+      };
+  }
+#+end_src
+
+This configuration produces these effects:
+
+- ~.agents/config/routing.yaml~ and ~.codex/settings.json~ are generated from
+  structured Nix data.
+- generated files are linked under ~$PRJ_ROOT~ when the shell starts;
+- the ~agent-skills~ startup entry installs the generated bundle;
+- file entries that depend on ~agent-skills~ run after skill installation;
+- explicit skill dependencies are converted to startup marker dependencies;
+- the generated bundle is installed into both ~.agents/skills~ and ~.codex/skills~.
+
+* Source Selection
+
+Each source is first passed to ~discoverCatalog~ after removing wrapper-only
+selection fields.
+
+The source fields passed through to ~agent-skills-nix~ are:
+
+- ~filter~
+- ~idPrefix~
+- ~input~
+- ~path~
+- ~subdir~
+
+The fields used only by this wrapper are:
+
+- ~enable~
+- ~enableAll~
+
+** ~enable~
+
+~enable~ is a list of discovered skill IDs to enable from the source. Skill IDs
+include ~idPrefix~ when a prefix is configured.
+
+Example:
+
+#+begin_src nix
+  {
+    sources.bingshan = {
+      idPrefix = "bingshan";
+      path = "${inputs.bingshan-skills}";
+      subdir = "skills";
+
+      enable = [
+        "bingshan/gnu-style-commit"
+      ];
+    };
+  }
+#+end_src
+
+** ~enableAll~
+
+~enableAll~ controls whether all discovered skills from the source are enabled.
+
+Default: ~config.enable == [ ]~.
+
+This means:
+
+- when ~enable~ is empty, ~enableAll~ defaults to ~true~;
+- when ~enable~ is non-empty, ~enableAll~ defaults to ~false~.
+
+Set ~enableAll~ explicitly when you want to override that default.
+
+** ~filter~
+
+~filter~ is the discovery filter expected by ~agent-skills-nix~.
+
+It affects catalog discovery only. It does not affect explicit skills under
+~perSystem.devshells.<name>.skills.skills~.
+
+~filter.maxDepth~ limits recursive discovery depth. ~null~ means no explicit limit
+in this module; ~agent-skills-nix~ caps the effective depth internally.
+
+~filter.nameRegex~ restricts discovered skill paths by regular expression.
+
+* Startup Ordering
+
+The module creates devshell startup entries for both files and skills.
+
+File startup entries use the same name as the file entry:
+
+#+begin_src nix
+  files.treefmt = {
+    # ...
+  };
+#+end_src
+
+This creates a startup entry named ~treefmt~.
+
+The skills integration creates one marker startup entry for each selected skill.
+The marker name is the skill ID prefixed with ~skill-~, with slashes replaced by
+dashes.
+
+For example:
+
+- ~bingshan/nix-refactor~ becomes ~skill-bingshan-nix-refactor~;
+- ~openai/cli-creator~ becomes ~skill-openai-cli-creator~.
+
+It also creates an ~agent-skills~ startup entry that depends on all selected skill
+markers and runs the ~agent-skills-nix~ install hook.
+
+File entries can depend on ~agent-skills~ when the generated file should be linked
+after skills are installed:
+
+#+begin_src nix
+  files.agent-routing = {
+    deps = [
+      "agent-skills"
+    ];
+
+    # ...
+  };
+#+end_src
+
+Explicit skill entries can depend on other explicit skill entries by using their
+configuration names:
+
+#+begin_src nix
+  skills.skills = {
+    nix-refactor = {
+      rename = "bingshan/nix-refactor";
+      # ...
+    };
+
+    "openai/cli-creator" = {
+      deps = [
+        "nix-refactor"
+      ];
+    };
+  };
+#+end_src
+
+If the dependency names an explicit skill that has ~rename~ set, the module maps
+the dependency to the renamed skill marker.
+
+* What The Module Manages
+
+For each ~perSystem.devshells.<name>~ entry, the module can manage:
+
+- the standard upstream devshell configuration;
+- generated project files declared under ~files~;
+- packages required by file entries;
+- skill bundles declared under ~skills~;
+- project-local skill installation targets;
+- the standard ~devShells.${system}.<name>~ flake output.
+
+Generated files are linked with ~ln -sfnT~. This updates the exact destination
+path and can replace an existing file or symbolic link at that path.
+
+* Option Reference
+
+** ~perSystem.devshells~
+
+Type: ~AttrSet String Submodule~.
+
+Main configuration entry for named devshells.
+
+Each entry is an upstream ~devshell~ module extended with the ~files~ and ~skills~
+options documented below.
+
+Default: ~{ }~.
+
+** ~perSystem.devshells.<name>.files~
+
+Type: ~AttrSet String Submodule~.
+
+Generated files linked into the project when entering the shell.
+
+Default: ~{ }~.
+
+*** ~perSystem.devshells.<name>.files.<file>.data~
+
+Type: ~Anything~.
+
+Structured data passed to ~generator~.
+
+*** ~perSystem.devshells.<name>.files.<file>.deps~
+
+Type: ~[String]~.
+
+Startup entries that must run before this file is linked.
+
+Default: ~[ ]~.
+
+*** ~perSystem.devshells.<name>.files.<file>.generator~
+
+Type: ~Function~.
+
+Function that turns ~data~ into a generated store file.
+
+Typical generators come from ~pkgs.formats~, for example ~(pkgs.formats.json {
+}).generate~.
+
+*** ~perSystem.devshells.<name>.files.<file>.hook~
+
+Type: ~Lines~.
+
+Extra shell hook appended after linking this file.
+
+Default: ~""~.
+
+*** ~perSystem.devshells.<name>.files.<file>.packages~
+
+Type: ~[Package]~.
+
+Packages needed by the generated file or hook.
+
+Default: ~[ ]~.
+
+All packages from file entries are added to the devshell package list.
+
+*** ~perSystem.devshells.<name>.files.<file>.path~
+
+Type: ~String~.
+
+Project-root-relative path for the linked generated file.
+
+The path must not start with ~/~.
+
+** ~perSystem.devshells.<name>.skills~
+
+Type: ~Submodule~.
+
+Agent Skills configuration for this devshell.
+
+Default: ~{ }~.
+
+*** ~perSystem.devshells.<name>.skills.excludePatterns~
+
+Type: ~[String]~.
+
+Patterns excluded while synchronising skill targets.
+
+Default:
+
+#+begin_src nix
+  [
+    "/.system"
+  ]
+#+end_src
+
+*** ~perSystem.devshells.<name>.skills.sources~
+
+Type: ~AttrSet String Submodule~.
+
+Skill source repositories used by this devshell.
+
+Default: ~{ }~.
+
+**** ~perSystem.devshells.<name>.skills.sources.<source>.enable~
+
+Type: ~[String]~.
+
+Skill IDs to enable from this source.
+
+Default: ~[ ]~.
+
+**** ~perSystem.devshells.<name>.skills.sources.<source>.enableAll~
+
+Type: ~Bool~.
+
+Enable every discovered skill from this source.
+
+Default: ~config.enable == [ ]~.
+
+**** ~perSystem.devshells.<name>.skills.sources.<source>.filter.maxDepth~
+
+Type: ~Maybe Positive Int~.
+
+Maximum recursive discovery depth for this source.
+
+Default: ~null~.
+
+**** ~perSystem.devshells.<name>.skills.sources.<source>.filter.nameRegex~
+
+Type: ~Maybe String~.
+
+Regular expression used to restrict discovered skill paths.
+
+Default: ~null~.
+
+**** ~perSystem.devshells.<name>.skills.sources.<source>.idPrefix~
+
+Type: ~Maybe String~.
+
+Optional prefix prepended to discovered skill IDs.
+
+Default: ~null~.
+
+**** ~perSystem.devshells.<name>.skills.sources.<source>.input~
+
+Type: ~Maybe String~.
+
+Flake input name providing this skill source.
+
+Default: ~null~.
+
+This is passed through to ~agent-skills-nix~. In ordinary project flakes, using
+~path = "${inputs.<name>}"~ is usually clearer because the path is resolved by the
+consuming flake before it reaches the library.
+
+**** ~perSystem.devshells.<name>.skills.sources.<source>.path~
+
+Type: ~Maybe Path or String~.
+
+Filesystem path providing this skill source.
+
+Default: ~null~.
+
+**** ~perSystem.devshells.<name>.skills.sources.<source>.subdir~
+
+Type: ~String~.
+
+Subdirectory under ~path~ or ~input~ containing skills.
+
+Default: ~"."~.
+
+*** ~perSystem.devshells.<name>.skills.skills~
+
+Type: ~AttrSet String Submodule~.
+
+Explicit skills selected for this devshell.
+
+Default: ~{ }~.
+
+**** ~perSystem.devshells.<name>.skills.skills.<skill>.deps~
+
+Type: ~[String]~.
+
+Other skill startup markers this skill depends on.
+
+Default: ~[ ]~.
+
+Names that match explicit skill configuration keys are resolved through that
+skill's final ID, including ~rename~.
+
+**** ~perSystem.devshells.<name>.skills.skills.<skill>.enable~
+
+Type: ~Bool~.
+
+Include this explicit skill in the generated bundle.
+
+Default: ~true~.
+
+**** ~perSystem.devshells.<name>.skills.skills.<skill>.from~
+
+Type: ~Maybe String~.
+
+Source name providing this skill.
+
+Default: ~null~.
+
+Set this for explicit skills. It must name an entry under ~skills.sources~.
+
+**** ~perSystem.devshells.<name>.skills.skills.<skill>.meta~
+
+Type: ~AttrSet String Any~.
+
+Metadata attached to the explicit skill.
+
+Default: ~{ }~.
+
+**** ~perSystem.devshells.<name>.skills.skills.<skill>.packages~
+
+Type: ~[Package]~.
+
+Packages symlinked into the generated skill directory.
+
+Default: ~[ ]~.
+
+These packages are bundled with the skill. They are not added to the devshell
+~PATH~ unless you also add them to ~devshell.packages~ or a file entry.
+
+**** ~perSystem.devshells.<name>.skills.skills.<skill>.path~
+
+Type: ~String~.
+
+Relative path under the selected source.
+
+Default: the explicit skill attribute name.
+
+**** ~perSystem.devshells.<name>.skills.skills.<skill>.rename~
+
+Type: ~Maybe String~.
+
+Optional skill ID used in the generated bundle.
+
+Default: ~null~.
+
+**** ~perSystem.devshells.<name>.skills.skills.<skill>.transform~
+
+Type: ~Maybe Raw~.
+
+Function that transforms ~SKILL.md~ content.
+
+Default: ~null~.
+
+The function receives:
+
+#+begin_src nix
+  {
+    original,
+    dependencies,
+  }
+#+end_src
+
+and must return the final ~SKILL.md~ content.
+
+*** ~perSystem.devshells.<name>.skills.targets~
+
+Type: ~AttrSet String Submodule~.
+
+Project-local skill installation targets.
+
+Default: ~{ }~.
+
+**** ~perSystem.devshells.<name>.skills.targets.<target>.dest~
+
+Type: ~String~.
+
+Destination for installed skills.
+
+**** ~perSystem.devshells.<name>.skills.targets.<target>.enable~
+
+Type: ~Bool~.
+
+Install skills into this target.
+
+Default: ~true~.
+
+**** ~perSystem.devshells.<name>.skills.targets.<target>.structure~
+
+Type: ~Enum "copy-tree" "link" "symlink-tree"~.
+
+Install target structure used by ~agent-skills-nix~.
+
+Default: ~"symlink-tree"~.
+
+* Footnotes
+
+[fn:1] devshell, https://github.com/numtide/devshell
+
+[fn:2] agent-skills-nix, https://github.com/Kyure-A/agent-skills-nix

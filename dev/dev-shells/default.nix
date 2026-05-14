@@ -278,6 +278,13 @@ let
           trim_trailing_whitespace = false;
         };
 
+        "*.org" = {
+          indent_size = 2;
+          indent_style = "space";
+          max_line_length = 80;
+          trim_trailing_whitespace = false;
+        };
+
         "*.nix" = {
           indent_style = "space";
           max_line_length = 80;
