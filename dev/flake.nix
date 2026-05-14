@@ -14,6 +14,11 @@
       url = "git+https://github.com/Kyure-A/agent-skills-nix.git?ref=master";
     };
 
+    bingshan-skills = {
+      flake = false;
+      url = "git+https://codeberg.org/bingshan/skills.git?ref=main";
+    };
+
     blank = {
       url = "git+https://github.com/divnix/blank.git?ref=master";
     };

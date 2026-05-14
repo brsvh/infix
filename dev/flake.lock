@@ -24,6 +24,23 @@
         "url": "https://github.com/Kyure-A/agent-skills-nix.git"
       }
     },
+    "bingshan-skills": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1778722480,
+        "narHash": "sha256-sl3Ml1+L+y5Q+7ygEIdRFnLETe9Ny7/HEy98Uh7jPqY=",
+        "ref": "main",
+        "rev": "0816797a2203dcea130208d7b89c4819057201dc",
+        "revCount": 3,
+        "type": "git",
+        "url": "https://codeberg.org/bingshan/skills.git"
+      },
+      "original": {
+        "ref": "main",
+        "type": "git",
+        "url": "https://codeberg.org/bingshan/skills.git"
+      }
+    },
     "blank": {
       "locked": {
         "lastModified": 1625557891,
@@ -124,6 +141,7 @@
     "root": {
       "inputs": {
         "agent-skills": "agent-skills",
+        "bingshan-skills": "bingshan-skills",
         "blank": "blank",
         "home-manager": "home-manager",
         "nix-unit": "nix-unit",

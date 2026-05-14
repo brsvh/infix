@@ -30,8 +30,8 @@
 
 ## Coding rules
 
-- When writing, changing, or generating Nix code, strictly follow
-  `dev/agents/docs/nix-coding-style.md`.
+- When writing, changing, generating, or restyling Nix code, use
+  `$nix-code-refactor` to refactor the code into the repository style.
 
 ## Commit message rules
 
