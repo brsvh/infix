@@ -14,6 +14,7 @@ let
     filterAttrs
     fromJSON
     genAttrs
+    hasAttr
     head
     isAttrs
     isFunction
@@ -660,6 +661,51 @@ in
   inherit
     evalFlakeModule
     ;
+
+  /**
+    Return a required flake input, or throw if it is absent.
+
+    This is intended for modules that require a caller-provided flake input.  It
+    checks only the top-level input name and returns the input value unchanged,
+    so existing inputs with values such as `null` or `false` still count as
+    present.
+
+    # Inputs
+
+    `inputs` (Attribute set)
+    : Flake output function inputs. This is usually the `inputs` value from
+      `outputs = inputs@{ ... }:`.
+
+    `input` (String)
+    : Required input name.
+
+    # Type
+
+    ```
+    hasInput :: AttrSet -> String -> Any
+    ```
+
+    # Examples
+    :::{.example}
+    ## `infix-lib.hasInput` usage example
+
+    ```nix
+    let
+      devshell = hasInput inputs "devshell";
+    in
+    devshell.packages.${system}.default
+    ```
+
+    :::
+  */
+  hasInput =
+    inputs: input:
+    if hasAttr input inputs then
+      inputs.${input}
+    else
+      throw ''
+        ${input} input not found, please add a ${input} input to your flake.
+      '';
 
   /**
     Build flake outputs from a flake module.

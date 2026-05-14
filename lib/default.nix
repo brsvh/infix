@@ -37,6 +37,7 @@ makeExtensible (
 
     inherit (final.flake)
       evalFlakeModule
+      hasInput
       mkFlake
       ;
 
