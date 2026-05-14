@@ -63,8 +63,7 @@ let
       mkStartup =
         _: file:
         let
-          generatedFile = file.generator file.data;
-          source = escapeShellArg (toString generatedFile);
+          source = escapeShellArg (toString file.file);
           target = escapeShellArg file.path;
         in
         {
@@ -87,6 +86,7 @@ let
 
       module =
         {
+          config,
           ...
         }:
         {
@@ -107,6 +107,15 @@ let
               '';
 
               type = with types; listOf str;
+            };
+
+            file = mkOption {
+              description = ''
+                Generated store file for this file entry.
+              '';
+
+              internal = true;
+              type = types.unspecified;
             };
 
             generator = mkOption {
@@ -144,6 +153,10 @@ let
 
               type = types.strMatching "[^/].*";
             };
+          };
+
+          config = {
+            file = config.generator config.data;
           };
         };
     in
