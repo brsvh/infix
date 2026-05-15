@@ -1,0 +1,805 @@
+#+title: flakeModules.configurations
+
+~configurations~ is a ~flake-parts~ module for declaring Home Manager and NixOS
+configurations from one project-local option tree.
+
+It wraps the standard flake outputs with a small declaration layer:
+
+- standalone Home Manager configurations are declared under
+  ~configurations.home~;
+- NixOS configurations are declared under ~configurations.system~;
+- NixOS users can receive Home Manager modules directly, or reuse a standalone
+  home configuration declared under ~configurations.home~;
+- global modules, profiles, special arguments, and Nixpkgs settings can be
+  shared across generated configurations.
+
+The module exports the generated configurations at the standard flake output
+paths:
+
+- ~homeConfigurations.<name>~
+- ~nixosConfigurations.<name>~
+
+* Installation
+
+If your flake already imports this repository as an input and exports
+~flakeModules.configurations~, add it to ~imports~ in the usual ~flake-parts~ style.
+
+The module uses a ~nixpkgs~ input to instantiate Nixpkgs and a ~home-manager~[fn:1]
+input to build Home Manager configurations and to add Home Manager support to
+NixOS configurations.
+
+#+begin_src nix
+  {
+    inputs = {
+      flake-parts.url = "github:hercules-ci/flake-parts";
+      home-manager.url = "github:nix-community/home-manager";
+      infix.url = "git+https://codeberg.org/bingshan/infix.git?ref=main";
+      nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    };
+
+    outputs =
+      inputs@{
+        flake-parts,
+        infix,
+        ...
+      }:
+      flake-parts.lib.mkFlake { inherit inputs; } {
+        imports = [
+          infix.flakeModules.configurations
+        ];
+
+        systems = [ ];
+      };
+  }
+#+end_src
+
+After that, configure homes under ~configurations.home~ and systems under
+~configurations.system~.
+
+* Quick Start
+
+The smallest useful standalone home configuration defines the target Nixpkgs
+system and one Home Manager module:
+
+#+begin_src nix
+  {
+    configurations.home.alice = {
+      nixpkgs = {
+        system = "x86_64-linux";
+      };
+
+      home =
+        {
+          pkgs,
+          ...
+        }:
+        {
+          home = {
+            username = "alice";
+            homeDirectory = "/home/alice";
+            stateVersion = "25.05";
+          };
+
+          programs.home-manager.enable = true;
+        };
+    };
+  }
+#+end_src
+
+This creates ~homeConfigurations.alice~.
+
+The smallest useful NixOS configuration defines one system module:
+
+#+begin_src nix
+  {
+    configurations.system.workstation = {
+      system =
+        {
+          ...
+        }:
+        {
+          nixpkgs.hostPlatform = "x86_64-linux";
+
+          networking.hostName = "workstation";
+          system.stateVersion = "25.05";
+        };
+    };
+  }
+#+end_src
+
+This creates ~nixosConfigurations.workstation~.
+
+* Home Configurations
+
+Use ~configurations.home.<name>~ to declare a standalone Home Manager
+configuration.
+
+#+begin_src nix
+  {
+    configurations.home = {
+      global = {
+        modules = [
+          ./home/modules/common.nix
+        ];
+
+        nixpkgs = {
+          system = "x86_64-linux";
+
+          config = {
+            allowUnfree = true;
+          };
+        };
+      };
+
+      alice = {
+        modules = [
+          ./home/modules/desktop.nix
+        ];
+
+        profiles = [
+          ./home/profiles/work.nix
+        ];
+
+        home = ./home/alice.nix;
+      };
+    };
+  }
+#+end_src
+
+Each non-~global~ entry under ~configurations.home~ becomes one
+~homeConfigurations.<name>~ output.
+
+For each home configuration, the module instantiates Nixpkgs with the configured
+~nixpkgs.input~, ~nixpkgs.system~, ~nixpkgs.config~, and ~nixpkgs.overlays~. Global
+Nixpkgs settings are merged with per-home settings.
+
+Home Manager modules are applied in this order:
+
+1. ~configurations.home.global.modules~
+2. ~configurations.home.<name>.modules~
+3. ~configurations.home.<name>.profiles~
+4. ~configurations.home.<name>.home~
+
+~extraSpecialArgs~ is built from ~configurations.home.global.specialArgs //
+configurations.home.<name>.specialArgs~, so per-home attributes override global
+attributes with the same names.
+
+* NixOS Configurations
+
+Use ~configurations.system.<name>~ to declare a NixOS configuration.
+
+#+begin_src nix
+  {
+    configurations.system = {
+      global = {
+        modules = [
+          ./nixos/modules/common.nix
+        ];
+
+        nixpkgs = {
+          config = {
+            allowUnfree = true;
+          };
+        };
+      };
+
+      workstation = {
+        modules = [
+          ./hosts/workstation/hardware.nix
+        ];
+
+        profiles = [
+          ./nixos/profiles/desktop.nix
+        ];
+
+        system = ./hosts/workstation/system.nix;
+      };
+    };
+  }
+#+end_src
+
+Each non-~global~ entry under ~configurations.system~ becomes one
+~nixosConfigurations.<name>~ output.
+
+The module builds each system with ~configurations.system.<name>.nixpkgs.input~.
+Global Nixpkgs settings are merged with per-system settings:
+
+- ~nixpkgs.config~ is merged with ~//~, so per-system keys override global keys;
+- ~nixpkgs.overlays~ are appended after global overlays.
+
+NixOS modules are applied in this order:
+
+1. the Home Manager NixOS module;
+2. a generated module setting ~home-manager.extraSpecialArgs~,
+   ~home-manager.useGlobalPkgs~, and ~home-manager.useUserPackages~;
+3. a generated module setting merged ~nixpkgs.config~ and ~nixpkgs.overlays~;
+4. ~configurations.system.global.modules~;
+5. ~configurations.system.<name>.modules~;
+6. ~configurations.system.<name>.system~;
+7. ~configurations.system.<name>.profiles~;
+8. generated user modules from ~configurations.system.<name>.users~.
+
+~specialArgs~ is built from ~configurations.system.global.specialArgs //
+configurations.system.<name>.specialArgs~, so per-system attributes override
+global attributes with the same names.
+
+* System Users
+
+Use ~configurations.system.<name>.users.<user>~ to declare NixOS users with Home
+Manager integration.
+
+Each user entry has two required pieces:
+
+- ~user~, a NixOS module that declares the system user;
+- ~home~, either a raw Home Manager module or a value from
+  ~configurations.home.<name>~.
+
+The raw Home Manager module form uses the user entry's own ~modules~ and ~profiles~:
+
+#+begin_src nix
+  {
+    configurations.system.workstation.users.alice = {
+      user =
+        {
+          ...
+        }:
+        {
+          users.users.alice = {
+            isNormalUser = true;
+            extraGroups = [
+              "wheel"
+            ];
+          };
+        };
+
+      modules = [
+        ./home/modules/desktop.nix
+      ];
+
+      profiles = [
+        ./home/profiles/work.nix
+      ];
+
+      home = ./home/alice.nix;
+    };
+  }
+#+end_src
+
+This produces a Home Manager user at ~home-manager.users.alice~.
+
+The reuse form points ~home~ at a standalone home configuration:
+
+#+begin_src nix
+  {
+    config,
+    ...
+  }:
+  {
+    configurations.home.alice = {
+      nixpkgs.system = "x86_64-linux";
+      home = ./home/alice.nix;
+    };
+
+    configurations.system.workstation.users.alice = {
+      user =
+        {
+          ...
+        }:
+        {
+          users.users.alice = {
+            isNormalUser = true;
+            extraGroups = [
+              "wheel"
+            ];
+          };
+        };
+
+      home = config.configurations.home.alice;
+    };
+  }
+#+end_src
+
+When ~home~ is a configuration reference, the module uses the referenced home
+configuration's global modules, local modules, profiles, and main ~home~ module.
+In that form, the user entry's own ~modules~ and ~profiles~ are not added.
+
+Only the referenced Home Manager modules are reused. The referenced standalone
+home configuration's ~nixpkgs~ and ~specialArgs~ settings are not used inside the
+NixOS configuration. Embedded Home Manager users use the NixOS configuration's
+global packages and ~configurations.system.<name>.specialArgs~.
+
+* Complete Example
+
+The following example combines shared settings, one standalone Home Manager
+configuration, one NixOS configuration, and one NixOS user that reuses the
+standalone home configuration:
+
+#+begin_src nix
+  {
+    config,
+    inputs,
+    ...
+  }:
+  {
+    configurations = {
+      home = {
+        global = {
+          specialArgs = {
+            inherit
+              inputs
+              ;
+          };
+
+          modules = [
+            ./home/modules/common.nix
+          ];
+
+          nixpkgs = {
+            system = "x86_64-linux";
+
+            config = {
+              allowUnfree = true;
+            };
+          };
+        };
+
+        alice = {
+          modules = [
+            ./home/modules/desktop.nix
+          ];
+
+          profiles = [
+            ./home/profiles/work.nix
+          ];
+
+          home = ./home/alice.nix;
+        };
+      };
+
+      system = {
+        global = {
+          specialArgs = {
+            inherit
+              inputs
+              ;
+          };
+
+          modules = [
+            ./nixos/modules/common.nix
+          ];
+
+          nixpkgs = {
+            config = {
+              allowUnfree = true;
+            };
+          };
+        };
+
+        workstation = {
+          modules = [
+            ./hosts/workstation/hardware.nix
+          ];
+
+          profiles = [
+            ./nixos/profiles/desktop.nix
+          ];
+
+          system = ./hosts/workstation/system.nix;
+
+          users = {
+            alice = {
+              user =
+                {
+                  ...
+                }:
+                {
+                  users.users.alice = {
+                    isNormalUser = true;
+                    extraGroups = [
+                      "wheel"
+                    ];
+                  };
+                };
+
+              home = config.configurations.home.alice;
+            };
+          };
+        };
+      };
+    };
+  }
+#+end_src
+
+This configuration produces these effects:
+
+- ~homeConfigurations.alice~ is generated from ~configurations.home.alice~;
+- ~nixosConfigurations.workstation~ is generated from
+  ~configurations.system.workstation~;
+- the NixOS configuration imports Home Manager with ~useGlobalPkgs = true~ and
+  ~useUserPackages = true~;
+- ~home-manager.users.alice~ imports the modules from
+  ~configurations.home.alice~;
+- global modules and Nixpkgs settings are shared across matching configuration
+  types.
+
+* What The Module Manages
+
+The module manages:
+
+- declarations under ~configurations.home~ and ~configurations.system~;
+- Nixpkgs instantiation for standalone Home Manager configurations;
+- NixOS module composition for system configurations;
+- Home Manager user modules inside generated NixOS configurations;
+- standard ~homeConfigurations~ and ~nixosConfigurations~ flake outputs.
+
+The module does not scan project directories for modules or profiles. Pass
+module paths or inline modules explicitly through ~modules~, ~profiles~, ~home~, ~user~,
+and ~system~.
+
+* Option Reference
+
+** ~configurations~
+
+Type: ~Submodule~.
+
+Declarative wrapper for flake ~homeConfigurations~ and ~nixosConfigurations~.
+
+Default: ~{ }~.
+
+** ~configurations.home~
+
+Type: ~Submodule~.
+
+Home Manager configuration declarations.
+
+Default: ~{ }~.
+
+Every non-~global~ attribute becomes a standalone ~homeConfigurations.<name>~
+output.
+
+*** ~configurations.home.global~
+
+Type: ~Submodule~.
+
+Default settings for home configurations.
+
+Default: ~{ }~.
+
+**** ~configurations.home.global.modules~
+
+Type: ~[Module]~.
+
+Home Manager modules imported into generated home configurations.
+
+Default: ~[ ]~.
+
+**** ~configurations.home.global.nixpkgs~
+
+Type: ~Submodule~.
+
+Default Nixpkgs input and settings for home configurations.
+
+Default: ~{ }~.
+
+***** ~configurations.home.global.nixpkgs.config~
+
+Type: ~AttrSet String Raw~.
+
+Nixpkgs configuration.
+
+Default: ~{ }~.
+
+***** ~configurations.home.global.nixpkgs.input~
+
+Type: ~Raw~.
+
+Nixpkgs input used to instantiate home configurations.
+
+Default: ~inputs.nixpkgs~.
+
+***** ~configurations.home.global.nixpkgs.overlays~
+
+Type: ~[Raw]~.
+
+Overlays applied when instantiating Nixpkgs.
+
+Default: ~[ ]~.
+
+***** ~configurations.home.global.nixpkgs.system~
+
+Type: ~String~.
+
+Nixpkgs system used for home configurations.
+
+Default: ~"x86_64-linux"~.
+
+**** ~configurations.home.global.specialArgs~
+
+Type: ~AttrSet String Raw~.
+
+Extra module arguments passed to generated home configurations.
+
+Default: ~inputs~.
+
+*** ~configurations.home.<name>~
+
+Type: ~Submodule~.
+
+Standalone Home Manager configuration declaration.
+
+Each entry becomes ~homeConfigurations.<name>~.
+
+**** ~configurations.home.<name>.home~
+
+Type: ~Module~.
+
+Main Home Manager module for this home configuration.
+
+**** ~configurations.home.<name>.modules~
+
+Type: ~[Module]~.
+
+Home Manager modules imported into this home configuration.
+
+Default: ~[ ]~.
+
+**** ~configurations.home.<name>.nixpkgs~
+
+Type: ~Submodule~.
+
+Nixpkgs input and settings for this home configuration.
+
+Default: ~{ }~.
+
+***** ~configurations.home.<name>.nixpkgs.config~
+
+Type: ~AttrSet String Raw~.
+
+Nixpkgs configuration.
+
+Default: ~{ }~.
+
+***** ~configurations.home.<name>.nixpkgs.input~
+
+Type: ~Raw~.
+
+Nixpkgs input used to instantiate this home configuration.
+
+Default: ~configurations.home.global.nixpkgs.input~.
+
+***** ~configurations.home.<name>.nixpkgs.overlays~
+
+Type: ~[Raw]~.
+
+Overlays applied when instantiating Nixpkgs.
+
+Default: ~[ ]~.
+
+***** ~configurations.home.<name>.nixpkgs.system~
+
+Type: ~String~.
+
+Nixpkgs system used for this home configuration.
+
+Default: ~configurations.home.global.nixpkgs.system~.
+
+**** ~configurations.home.<name>.profiles~
+
+Type: ~[Module]~.
+
+Profiles imported into the generated home configuration.
+
+Default: ~[ ]~.
+
+**** ~configurations.home.<name>.specialArgs~
+
+Type: ~AttrSet String Raw~.
+
+Extra module arguments passed to this home configuration.
+
+Default: ~inputs~.
+
+** ~configurations.system~
+
+Type: ~Submodule~.
+
+NixOS configuration declarations.
+
+Default: ~{ }~.
+
+Every non-~global~ attribute becomes a ~nixosConfigurations.<name>~ output.
+
+*** ~configurations.system.global~
+
+Type: ~Submodule~.
+
+Default settings for NixOS configurations.
+
+Default: ~{ }~.
+
+**** ~configurations.system.global.modules~
+
+Type: ~[Module]~.
+
+NixOS modules imported into generated system configurations.
+
+Default: ~[ ]~.
+
+**** ~configurations.system.global.nixpkgs~
+
+Type: ~Submodule~.
+
+Default Nixpkgs input and settings for NixOS configurations.
+
+Default: ~{ }~.
+
+***** ~configurations.system.global.nixpkgs.config~
+
+Type: ~AttrSet String Raw~.
+
+Nixpkgs configuration.
+
+Default: ~{ }~.
+
+***** ~configurations.system.global.nixpkgs.input~
+
+Type: ~Raw~.
+
+Nixpkgs input used to instantiate NixOS configurations.
+
+Default: ~inputs.nixpkgs~.
+
+***** ~configurations.system.global.nixpkgs.overlays~
+
+Type: ~[Raw]~.
+
+Overlays applied when instantiating Nixpkgs.
+
+Default: ~[ ]~.
+
+**** ~configurations.system.global.specialArgs~
+
+Type: ~AttrSet String Raw~.
+
+Extra module arguments passed to generated NixOS configurations.
+
+Default: ~inputs~.
+
+*** ~configurations.system.<name>~
+
+Type: ~Submodule~.
+
+NixOS configuration declaration.
+
+Each entry becomes ~nixosConfigurations.<name>~.
+
+**** ~configurations.system.<name>.modules~
+
+Type: ~[Module]~.
+
+NixOS modules imported into this system configuration.
+
+Default: ~[ ]~.
+
+**** ~configurations.system.<name>.nixpkgs~
+
+Type: ~Submodule~.
+
+Nixpkgs input and settings for this NixOS configuration.
+
+Default: ~{ }~.
+
+***** ~configurations.system.<name>.nixpkgs.config~
+
+Type: ~AttrSet String Raw~.
+
+Nixpkgs configuration.
+
+Default: ~{ }~.
+
+***** ~configurations.system.<name>.nixpkgs.input~
+
+Type: ~Raw~.
+
+Nixpkgs input used to instantiate this NixOS configuration.
+
+Default: ~configurations.system.global.nixpkgs.input~.
+
+***** ~configurations.system.<name>.nixpkgs.overlays~
+
+Type: ~[Raw]~.
+
+Overlays applied when instantiating Nixpkgs.
+
+Default: ~[ ]~.
+
+**** ~configurations.system.<name>.profiles~
+
+Type: ~[Module]~.
+
+Profiles imported into the generated NixOS configuration.
+
+Default: ~[ ]~.
+
+**** ~configurations.system.<name>.specialArgs~
+
+Type: ~AttrSet String Raw~.
+
+Extra module arguments passed to this NixOS configuration.
+
+Default: ~inputs~.
+
+**** ~configurations.system.<name>.system~
+
+Type: ~Module~.
+
+Main NixOS module for this system configuration.
+
+**** ~configurations.system.<name>.users~
+
+Type: ~AttrSet String Submodule~.
+
+Users declared by this NixOS configuration.
+
+Default: ~{ }~.
+
+***** ~configurations.system.<name>.users.<user>.home~
+
+Type: ~Raw~.
+
+Home Manager module, or a value from ~configurations.home~.
+
+When this is a value from ~configurations.home~, only the referenced Home Manager
+modules are reused. The referenced home configuration's standalone ~nixpkgs~ and
+~specialArgs~ settings do not apply inside the NixOS configuration.
+
+***** ~configurations.system.<name>.users.<user>.modules~
+
+Type: ~[Module]~.
+
+Home Manager modules imported when ~home~ is a raw Home Manager module.
+
+Default: ~[ ]~.
+
+***** ~configurations.system.<name>.users.<user>.profiles~
+
+Type: ~[Module]~.
+
+Home Manager profiles imported when ~home~ is a raw Home Manager module.
+
+Default: ~[ ]~.
+
+***** ~configurations.system.<name>.users.<user>.specialArgs~
+
+Type: ~AttrSet String Raw~.
+
+Declared extra module arguments for this user entry.
+
+Default: ~inputs~.
+
+The current implementation does not pass this option to Home Manager. Use
+~configurations.system.<name>.specialArgs~ for arguments that embedded Home
+Manager users need.
+
+***** ~configurations.system.<name>.users.<user>.user~
+
+Type: ~Module~.
+
+NixOS module declaring this system user.
+
+* Generated Outputs
+
+The module also stores generated values under internal options before assigning
+standard flake outputs:
+
+- ~configurations.finalHomeConfigurations~ is assigned to
+  ~flake.homeConfigurations~;
+- ~configurations.finalNixOSConfigurations~ is assigned to
+  ~flake.nixosConfigurations~.
+
+These options are internal implementation details. Consumers should normally use
+the standard flake outputs.
+
+* Footnotes
+
+[fn:1] Home Manager, https://github.com/nix-community/home-manager
