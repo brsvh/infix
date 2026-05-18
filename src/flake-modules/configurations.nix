@@ -23,6 +23,7 @@ let
     isAttrs
     mapAttrs
     mapAttrsToList
+    mkDefault
     mkOption
     removeAttrs
     types
@@ -439,7 +440,7 @@ let
     };
 
   mkSystem =
-    _: systemConfiguration:
+    systemName: systemConfiguration:
     let
       mkUserModule =
         userName: userConfiguration:
@@ -497,6 +498,11 @@ let
       userModules = mapAttrsToList mkUserModule systemConfiguration.users;
 
       modules = [
+        {
+          networking = {
+            hostName = mkDefault "${systemName}";
+          };
+        }
         home-manager.nixosModules.home-manager
         {
           home-manager = {
