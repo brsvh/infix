@@ -177,7 +177,7 @@ The recommended form uses named sources and explicit skills with ~from =
                 subdir = "skills";
 
                 enable = [
-                  "bingshan/gnu-style-commit"
+                  "bingshan/nix-gnu-style-commit"
                 ];
               };
 
@@ -333,7 +333,7 @@ explicit skills, packages, transforms, and startup ordering:
                 subdir = "skills";
 
                 enable = [
-                  "bingshan/gnu-style-commit"
+                  "bingshan/nix-gnu-style-commit"
                 ];
               };
 
@@ -478,7 +478,7 @@ Example:
       subdir = "skills";
 
       enable = [
-        "bingshan/gnu-style-commit"
+        "bingshan/nix-gnu-style-commit"
       ];
     };
   }

@@ -73,7 +73,7 @@ let
     catalog = skillCatalog;
 
     enable = [
-      "bingshan/gnu-style-commit"
+      "bingshan/nix-gnu-style-commit"
       "bingshan/nix-code-refactor"
       "infix/commit"
       "openai/cli-creator"
