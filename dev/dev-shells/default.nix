@@ -202,8 +202,9 @@ let
         ];
 
         project_doc_max_bytes = 32768;
-        review_model = "gpt-5.4";
+        review_model = "gpt-5.5";
         sandbox_mode = "workspace-write";
+        service_tier = "fast";
         web_search = "cached";
 
         agents = {
