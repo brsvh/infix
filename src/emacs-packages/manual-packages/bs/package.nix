@@ -1,6 +1,10 @@
 {
+  ebdb,
   fetchgit,
   lib,
+  mu4e,
+  org-vcard,
+  tabspaces,
   trivialBuild,
   ...
 }:
@@ -14,8 +18,8 @@ let
 
   src = fetchgit {
     url = "https://codeberg.org/bingshan/emacs-bs.git";
-    rev = "1be38153c2a99a80bb6fb0460ef76fc606232082";
-    hash = "sha256-2ElexizoGeNKDc71Hy2/dT6HOCDgLf1P5nQYgVX3Jwk=";
+    rev = "275828c769df90bddf4b8689c898b8f1b6daa64a";
+    hash = "sha256-ESiF3QabgDLNs5m+QOlmbXhdRxQ5z/3/AeZxCIhveMM=";
   };
 
   meta = {
@@ -33,4 +37,13 @@ trivialBuild rec {
     ;
 
   pname = "bs";
+
+  buildInputs = propagatedUserEnvPkgs;
+
+  propagatedUserEnvPkgs = [
+    ebdb
+    mu4e
+    org-vcard
+    tabspaces
+  ];
 }
