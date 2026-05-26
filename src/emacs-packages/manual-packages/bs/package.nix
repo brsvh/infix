@@ -18,8 +18,8 @@ let
 
   src = fetchgit {
     url = "https://codeberg.org/bingshan/emacs-bs.git";
-    rev = "43691b27308ec7a7456d5f9ce1154431b2e00fea";
-    hash = "sha256-BRZXpSu1utcsSLfMnZFlpOrV+KFGvrp2wMqkTJXSmqc=";
+    rev = "fa123502fa8480a71f3b4cf4992dfbaa32aa4fb1";
+    hash = "sha256-Y7DxYHj+Adv+uDugVbMWR1W8MKbU27eSQ5Vki+RElM8=";
   };
 
   meta = {
