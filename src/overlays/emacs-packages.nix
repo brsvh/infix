@@ -25,6 +25,25 @@ final: prev: {
             };
 
           melpaPackages = p.melpaPackages // {
+            # Upstream Package-Requires omits denote-sequence.
+            denote-explore =
+              p.melpaPackages.denote-explore.overrideAttrs
+                (
+                  finalAttrs: prevAttrs: {
+                    packageRequires =
+                      (prevAttrs.packageRequires or [ ])
+                      ++ [
+                        p.denote-sequence
+                      ];
+
+                    propagatedBuildInputs =
+                      (prevAttrs.propagatedBuildInputs or [ ])
+                      ++ [
+                        p.denote-sequence
+                      ];
+                  }
+                );
+
             sly-macrostep =
               p.melpaPackages.sly-macrostep.overrideAttrs
                 (
