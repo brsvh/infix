@@ -213,15 +213,6 @@ let
           max_threads = 2;
         };
 
-        mcp_servers = {
-          nixos = {
-            command = "mcp-nixos";
-            required = false;
-            startup_timeout_sec = 20;
-            tool_timeout_sec = 120;
-          };
-        };
-
         sandbox_workspace_write = {
           exclude_slash_tmp = false;
           exclude_tmpdir_env_var = false;
@@ -248,7 +239,6 @@ let
 
       packages = with pkgs; [
         codex
-        mcp-nixos
       ];
     };
 
