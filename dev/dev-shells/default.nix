@@ -24,7 +24,6 @@ let
     attrNames
     baseNameOf
     concatMap
-    concatMapStringsSep
     concatStringsSep
     elem
     escapeShellArg
@@ -33,7 +32,6 @@ let
     map
     mapAttrs
     optional
-    pipe
     removeAttrs
     ;
 
@@ -173,18 +171,6 @@ let
       (baseNameOf output)
       data;
 
-  yaml =
-    request:
-    let
-      inherit (request)
-        data
-        output
-        ;
-    in
-    (pkgs.formats.yaml { }).generate
-      (baseNameOf output)
-      data;
-
   files = {
     codex = {
       data = {
@@ -312,83 +298,98 @@ let
       ];
     };
 
-    lefthook = {
+    prek = {
       data = {
-        pre-commit = {
-          commands = {
-            treefmt = {
-              run = "treefmt --fail-on-change {staged_files}";
+        default_install_hook_types = [
+          "pre-commit"
+        ];
 
-              skip = [
-                "merge"
-                "rebase"
-              ];
-            };
-          };
+        repos = [
+          {
+            repo = "local";
 
-          skip = [
-            {
-              ref = "update_flake_lock_action";
-            }
-          ];
-        };
+            hooks = [
+              {
+                entry = "treefmt --fail-on-change";
+                id = "treefmt";
+                language = "system";
+                name = "treefmt";
+
+                stages = [
+                  "pre-commit"
+                ];
+              }
+            ];
+          }
+        ];
       };
 
       depends = [
         "treefmt"
       ];
 
-      engine = yaml;
+      engine = toml;
 
       hook = {
         extra =
           cfg:
           let
             inherit (pkgs)
-              lefthook
+              prek
               runtimeShell
               writeScript
               ;
 
+            mkInstall = stage: ''
+              if gitDir="$(${getExe git} -C "$projectRoot" rev-parse --absolute-git-dir 2>/dev/null)"; then
+                mkdir -p "$gitDir/hooks"
+                ln -sf "${mkScript stage}" "$gitDir/hooks/${stage}"
+              fi
+            '';
+
             mkScript =
               stage:
-              writeScript "lefthook-${stage}" ''
+              writeScript "prek-${stage}" ''
                 #!${runtimeShell}
-                [ "$LEFTHOOK" == "0" ] || \
-                  ${getExe lefthook} run "${stage}" "$@"
+                if [ "''${PREK:-}" = "0" ] ; then
+                  exit 0
+                fi
+
+                repoRoot="$(${getExe git} rev-parse --show-toplevel 2>/dev/null || true)"
+
+                if [ -z "$repoRoot" ]; then
+                  repoRoot="$PWD"
+                fi
+
+                gitDir="$(${getExe git} -C "$repoRoot" rev-parse --absolute-git-dir 2>/dev/null || true)"
+
+                if [ -n "$gitDir" ]; then
+                  if [ -e "$gitDir/MERGE_HEAD" ] \
+                    || [ -d "$gitDir/rebase-apply" ] \
+                    || [ -d "$gitDir/rebase-merge" ]; then
+                    exit 0
+                  fi
+
+                  ref="$(${getExe git} -C "$repoRoot" symbolic-ref --quiet --short HEAD 2>/dev/null || true)"
+
+                  if [ "$ref" = "update_flake_lock_action" ]; then
+                    exit 0
+                  fi
+                fi
+
+                exec ${getExe prek} -C "$repoRoot" run --stage "${stage}" "$@"
               '';
           in
-          pipe cfg [
-            (
-              config:
-              removeAttrs config [
-                "colors"
-                "extends"
-                "skip_output"
-                "source_dir"
-                "source_dir_local"
-              ]
-            )
-            attrNames
-            (map (
-              stage:
-              ''ln -sf "${mkScript stage}" "$projectRoot/.git/hooks/${stage}"''
-            ))
-            (
-              stages:
-              optional (stages != [ ]) ''
-                mkdir -p "$projectRoot/.git/hooks"
-              ''
-              ++ stages
-            )
-            (concatStringsSep "\n")
-          ];
+          concatStringsSep "\n" (
+            map mkInstall cfg.default_install_hook_types
+          );
       };
 
-      output = "lefthook.yml";
+      output = "prek.toml";
 
       packages = with pkgs; [
-        lefthook
+        git
+        prek
       ];
     };
 
