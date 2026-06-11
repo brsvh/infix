@@ -74,6 +74,7 @@ let
       "bingshan/nix-gnu-style-commit"
       "bingshan/nix-code-refactor"
       "infix/commit"
+      "infix/nix-initial-manual-emacs-package"
       "openai/cli-creator"
     ];
 
@@ -176,7 +177,6 @@ let
       data = {
         approval_policy = "on-request";
         model = "gpt-5.5";
-        model_provider = "openai";
         model_reasoning_effort = "xhigh";
         model_reasoning_summary = "auto";
         model_verbosity = "high";
