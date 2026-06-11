@@ -33,7 +33,7 @@ trivialBuild rec {
     version
     ;
 
-  pname = "bs";
+  pname = "flymake-posframe";
 
   buildInputs = propagatedUserEnvPkgs;
 
