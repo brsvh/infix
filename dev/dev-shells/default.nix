@@ -75,6 +75,7 @@ let
       "bingshan/nix-code-refactor"
       "infix/commit"
       "infix/nix-initial-manual-emacs-package"
+      "infix/nix-update-manual-emacs-package"
       "openai/cli-creator"
     ];
 
