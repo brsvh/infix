@@ -15,8 +15,8 @@ let
 
   src = fetchgit {
     url = "https://codeberg.org/bingshan/emacs-eat-dwim.git";
-    rev = "fd539aa8aee06f557e42cea048340234cca47a8a";
-    hash = "sha256-9B5xLsCm4kl7P/vLkyY8NYbyo6IzwdZodk/FV1RYAVY=";
+    rev = "030082b92bac3af199f2d8e469942d76b770a59f";
+    hash = "sha256-2bmCysnUaAXnbzmQfuiZAZDn57CbPvL8aknvrpJhRD4=";
   };
 
   meta = {
