@@ -173,61 +173,6 @@ let
       data;
 
   files = {
-    codex = {
-      data = {
-        approval_policy = "on-request";
-        model = "gpt-5.5";
-        model_reasoning_effort = "xhigh";
-        model_reasoning_summary = "auto";
-        model_verbosity = "high";
-        personality = "pragmatic";
-        plan_mode_reasoning_effort = "xhigh";
-
-        project_doc_fallback_filenames = [
-          "dev/agents/AGENTS.md"
-        ];
-
-        project_doc_max_bytes = 32768;
-        review_model = "gpt-5.5";
-        sandbox_mode = "workspace-write";
-        service_tier = "fast";
-        web_search = "cached";
-
-        agents = {
-          job_max_runtime_seconds = 1800;
-          max_depth = 1;
-          max_threads = 2;
-        };
-
-        sandbox_workspace_write = {
-          exclude_slash_tmp = false;
-          exclude_tmpdir_env_var = false;
-          network_access = false;
-          writable_roots = [ ];
-        };
-
-        shell_environment_policy = {
-          "inherit" = "all";
-
-          exclude = [ ];
-
-          experimental_use_profile = false;
-          ignore_default_excludes = false;
-
-          include_only = [ ];
-
-          set = { };
-        };
-      };
-
-      engine = toml;
-      output = ".codex/config.toml";
-
-      packages = with pkgs; [
-        codex
-      ];
-    };
-
     editorconfig = {
       data = {
         root = true;
