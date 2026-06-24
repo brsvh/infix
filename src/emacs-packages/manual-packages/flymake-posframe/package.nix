@@ -2,7 +2,7 @@
   fetchgit,
   lib,
   posframe,
-  trivialBuild,
+  melpaBuild,
   ...
 }:
 let
@@ -26,7 +26,7 @@ let
     maintainers = with maintainers; [ brsvh ];
   };
 in
-trivialBuild rec {
+melpaBuild {
   inherit
     meta
     src
@@ -35,9 +35,7 @@ trivialBuild rec {
 
   pname = "flymake-posframe";
 
-  buildInputs = propagatedUserEnvPkgs;
-
-  propagatedUserEnvPkgs = [
+  packageRequires = [
     posframe
   ];
 }
