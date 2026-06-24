@@ -5,7 +5,7 @@
   fetchgit,
   lib,
   mu4e,
-  trivialBuild,
+  melpaBuild,
   ...
 }:
 let
@@ -29,7 +29,7 @@ let
     maintainers = with maintainers; [ brsvh ];
   };
 in
-trivialBuild rec {
+melpaBuild {
   inherit
     meta
     src
@@ -38,9 +38,7 @@ trivialBuild rec {
 
   pname = "consult-mu";
 
-  buildInputs = propagatedUserEnvPkgs;
-
-  propagatedUserEnvPkgs = [
+  packageRequires = [
     consult
     embark
     embark-consult
