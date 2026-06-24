@@ -3,7 +3,7 @@
   knockknock,
   lib,
   mu4e,
-  trivialBuild,
+  melpaBuild,
   ...
 }:
 let
@@ -27,7 +27,7 @@ let
     maintainers = with maintainers; [ brsvh ];
   };
 in
-trivialBuild rec {
+melpaBuild {
   inherit
     meta
     src
@@ -36,9 +36,7 @@ trivialBuild rec {
 
   pname = "mu4e-knockknock";
 
-  buildInputs = propagatedUserEnvPkgs;
-
-  propagatedUserEnvPkgs = [
+  packageRequires = [
     knockknock
     mu4e
   ];
