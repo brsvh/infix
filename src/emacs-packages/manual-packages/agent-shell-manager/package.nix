@@ -2,7 +2,7 @@
   agent-shell,
   fetchgit,
   lib,
-  trivialBuild,
+  melpaBuild,
   ...
 }:
 let
@@ -11,7 +11,7 @@ let
     maintainers
     ;
 
-  version = "unstable-2026-02-13";
+  version = "0-unstable-2026-02-13";
 
   src = fetchgit {
     url = "https://github.com/jethrokuan/agent-shell-manager.git";
@@ -26,7 +26,7 @@ let
     maintainers = with maintainers; [ brsvh ];
   };
 in
-trivialBuild rec {
+melpaBuild {
   inherit
     meta
     src
@@ -35,9 +35,7 @@ trivialBuild rec {
 
   pname = "agent-shell-manager";
 
-  buildInputs = propagatedUserEnvPkgs;
-
-  propagatedUserEnvPkgs = [
+  packageRequires = [
     agent-shell
   ];
 }
