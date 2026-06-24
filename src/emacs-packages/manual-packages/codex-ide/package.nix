@@ -1,8 +1,8 @@
 {
   fetchgit,
   lib,
+  melpaBuild,
   transient,
-  trivialBuild,
   ...
 }:
 let
@@ -11,12 +11,12 @@ let
     maintainers
     ;
 
-  version = "0.3.1";
+  version = "0.3.2";
 
   src = fetchgit {
     url = "https://github.com/dgillis/emacs-codex-ide.git";
-    rev = "5ada64bb796ba983bee26af0c545b2fae801808d";
-    hash = "sha256-/ixhL4gCkM3Aqv/mW2TS2yg7OIXaRui7RuiRbwLaR/g=";
+    rev = "1418bd7b5f4e44706f4ab622b9b9e76f475ed4ae";
+    hash = "sha256-Mve+Jy6jdojRK+c5v7rqr9PIkP1RT7/TkLG3foRdae8=";
   };
 
   meta = {
@@ -26,7 +26,7 @@ let
     maintainers = with maintainers; [ brsvh ];
   };
 in
-trivialBuild rec {
+melpaBuild {
   inherit
     meta
     src
@@ -35,9 +35,7 @@ trivialBuild rec {
 
   pname = "codex-ide";
 
-  buildInputs = propagatedUserEnvPkgs;
-
-  propagatedUserEnvPkgs = [
+  packageRequires = [
     transient
   ];
 }
