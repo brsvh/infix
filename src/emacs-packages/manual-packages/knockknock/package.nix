@@ -3,7 +3,7 @@
   lib,
   nerd-icons,
   posframe,
-  trivialBuild,
+  melpaBuild,
   ...
 }:
 let
@@ -27,7 +27,7 @@ let
     maintainers = with maintainers; [ brsvh ];
   };
 in
-trivialBuild rec {
+melpaBuild {
   inherit
     meta
     src
@@ -36,11 +36,7 @@ trivialBuild rec {
 
   pname = "knockknock";
 
-  buildInputs = propagatedUserEnvPkgs;
-
-  propagatedBuildInputs = propagatedUserEnvPkgs;
-
-  propagatedUserEnvPkgs = [
+  packageRequires = [
     nerd-icons
     posframe
   ];
