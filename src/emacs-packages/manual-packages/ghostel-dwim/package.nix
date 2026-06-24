@@ -2,7 +2,7 @@
   fetchgit,
   ghostel,
   lib,
-  trivialBuild,
+  melpaBuild,
   ...
 }:
 let
@@ -26,7 +26,7 @@ let
     maintainers = with maintainers; [ brsvh ];
   };
 in
-trivialBuild rec {
+melpaBuild {
   inherit
     meta
     src
@@ -39,9 +39,7 @@ trivialBuild rec {
     cp src/*.el .
   '';
 
-  buildInputs = propagatedUserEnvPkgs;
-
-  propagatedUserEnvPkgs = [
+  packageRequires = [
     ghostel
   ];
 }
