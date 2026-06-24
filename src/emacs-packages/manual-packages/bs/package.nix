@@ -5,7 +5,7 @@
   mu4e,
   org-vcard,
   tabspaces,
-  trivialBuild,
+  melpaBuild,
   ...
 }:
 let
@@ -29,7 +29,7 @@ let
     maintainers = with maintainers; [ brsvh ];
   };
 in
-trivialBuild rec {
+melpaBuild {
   inherit
     meta
     src
@@ -38,9 +38,25 @@ trivialBuild rec {
 
   pname = "bs";
 
-  buildInputs = propagatedUserEnvPkgs;
+  postPatch = ''
+    cat > bs.el <<'EOF'
+    ;;; bs.el --- Personal GNU Emacs Lisp extensions -*- lexical-binding: t; -*-
 
-  propagatedUserEnvPkgs = [
+    ;; Package-Requires: ((emacs "30.1") (ebdb "0.8.22") (mu4e "1.12.13") (org-vcard "0.3.1") (tabspaces "1.7"))
+    ;; Version: ${version}
+
+    ;;; Commentary:
+    ;; Personal GNU Emacs Lisp extensions.
+
+    ;;; Code:
+
+    (provide 'bs)
+
+    ;;; bs.el ends here
+    EOF
+  '';
+
+  packageRequires = [
     ebdb
     mu4e
     org-vcard
