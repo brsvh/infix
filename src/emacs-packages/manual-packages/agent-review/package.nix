@@ -3,7 +3,7 @@
   agent-shell,
   fetchgit,
   lib,
-  trivialBuild,
+  melpaBuild,
   ...
 }:
 let
@@ -27,7 +27,7 @@ let
     maintainers = with maintainers; [ brsvh ];
   };
 in
-trivialBuild rec {
+melpaBuild {
   inherit
     meta
     src
@@ -36,9 +36,7 @@ trivialBuild rec {
 
   pname = "agent-review";
 
-  buildInputs = propagatedUserEnvPkgs;
-
-  propagatedUserEnvPkgs = [
+  packageRequires = [
     acp
     agent-shell
   ];
