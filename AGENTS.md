@@ -30,12 +30,16 @@
 
 ## Coding rules
 
-- When writing, changing, generating, or restyling Nix code, use
-  `$nix-code-refactor` to refactor the code into the repository style.
+- Keep Nix changes consistent with the surrounding module style.
+- After changing Nix code, format the affected files with the repository
+  formatter, normally `nix fmt` from the repository root.
+- For broader Nix changes, run the relevant checks, normally `nix flake check`,
+  unless the change scope or environment makes that impractical. If checks are
+  not run, say so explicitly.
 
 ## Commit message rules
 
-- Follow `dev/agents/docs/commit-message-style.md`.
+- When asked to commit staged changes, use the `commit` skill.
 - Describe staged changes only.
 - Use only `scope: Verb summary` or `scope: subscope: Verb summary`.
 - Derive scope from staged paths and staged diff.
@@ -46,4 +50,3 @@
 - Always include a body after exactly one blank line.
 - Write the body as `* path: change.` bullets with concise file-oriented
   sentences.
-- When asked to commit staged changes, use the `commit` skill.
