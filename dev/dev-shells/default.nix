@@ -1,25 +1,10 @@
 {
-  inputs,
   lib,
   pkgs,
   projectRoot,
   ...
 }:
 let
-  inherit (inputs)
-    bingshan-skills
-    openai-skills
-    ;
-
-  inherit (inputs.agent-skills.lib.agent-skills)
-    allowlistFor
-    defaultLocalTargets
-    discoverCatalog
-    mkBundle
-    mkShellHook
-    selectSkills
-    ;
-
   inherit (lib)
     attrNames
     baseNameOf
@@ -44,74 +29,6 @@ let
     mkShell
     writeText
     ;
-
-  skillSources = {
-    bingshan = {
-      idPrefix = "bingshan";
-      path = "${bingshan-skills}";
-      subdir = "skills";
-    };
-
-    infix = {
-      idPrefix = "infix";
-      path = projectRoot;
-      subdir = "dev/agents/skills";
-    };
-
-    openai = {
-      idPrefix = "openai";
-      path = "${openai-skills}";
-      subdir = "skills/.curated";
-    };
-  };
-
-  skillCatalog = discoverCatalog skillSources;
-
-  skillAllowlist = allowlistFor {
-    catalog = skillCatalog;
-
-    enable = [
-      "bingshan/nix-gnu-style-commit"
-      "bingshan/nix-code-refactor"
-      "infix/commit"
-      "infix/nix-initial-manual-emacs-package"
-      "infix/nix-update-manual-emacs-package"
-      "openai/cli-creator"
-    ];
-
-    sources = skillSources;
-  };
-
-  skillSelection = selectSkills {
-    allowlist = skillAllowlist;
-    catalog = skillCatalog;
-    sources = skillSources;
-
-    skills = { };
-  };
-
-  skillBundle = mkBundle {
-    inherit
-      pkgs
-      ;
-
-    selection = skillSelection;
-  };
-
-  skillLocalTargets = {
-    codex = defaultLocalTargets.codex // {
-      enable = true;
-    };
-  };
-
-  skillShellHook = mkShellHook {
-    inherit
-      pkgs
-      ;
-
-    bundle = skillBundle;
-    targets = skillLocalTargets;
-  };
 
   mkFile = request: request.engine request;
 
@@ -412,8 +329,6 @@ mkShell {
   shellHook = concatStringsSep "\n" (
     [
       ''projectRoot="$(${getExe git} rev-parse --show-toplevel)"''
-      ''export AGENT_SKILLS_ROOT="$projectRoot"''
-      skillShellHook
     ]
     ++ map (name: installWithHook files.${name}) names
   );

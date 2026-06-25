@@ -1,46 +1,5 @@
 {
   "nodes": {
-    "agent-skills": {
-      "inputs": {
-        "home-manager": [
-          "home-manager"
-        ],
-        "nixpkgs": [
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1780896346,
-        "narHash": "sha256-WC5hQ0GOmFPKrlbit3vjjJMlltwI5vpWXsHj/n5NvVk=",
-        "ref": "master",
-        "rev": "61d701aa8fffd918d8d8c0ac4784bdbadf6ddd60",
-        "revCount": 85,
-        "type": "git",
-        "url": "https://github.com/Kyure-A/agent-skills-nix.git"
-      },
-      "original": {
-        "ref": "master",
-        "type": "git",
-        "url": "https://github.com/Kyure-A/agent-skills-nix.git"
-      }
-    },
-    "bingshan-skills": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1779179991,
-        "narHash": "sha256-M4ZdkviKUt/fytOanKPmkMJ8BcU2l+go9oE0UqH4pWw=",
-        "ref": "main",
-        "rev": "bb559a371150726ed86043b0f7cc1ef4f5fa5684",
-        "revCount": 7,
-        "type": "git",
-        "url": "https://codeberg.org/bingshan/skills.git"
-      },
-      "original": {
-        "ref": "main",
-        "type": "git",
-        "url": "https://codeberg.org/bingshan/skills.git"
-      }
-    },
     "blank": {
       "locked": {
         "lastModified": 1625557891,
@@ -232,27 +191,8 @@
         "url": "https://github.com/NixOS/nixpkgs.git"
       }
     },
-    "openai-skills": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1780071638,
-        "narHash": "sha256-drA/ypVE+yK4W2Bj8IUtWaVLF390Pfy7YLcmdju5dow=",
-        "ref": "main",
-        "rev": "a8924c2a35cfa290458852c4fad17c9133054c2e",
-        "revCount": 111,
-        "type": "git",
-        "url": "https://github.com/openai/skills.git"
-      },
-      "original": {
-        "ref": "main",
-        "type": "git",
-        "url": "https://github.com/openai/skills.git"
-      }
-    },
     "root": {
       "inputs": {
-        "agent-skills": "agent-skills",
-        "bingshan-skills": "bingshan-skills",
         "blank": "blank",
         "blueprint": "blueprint",
         "bun": "bun",
@@ -261,7 +201,6 @@
         "llm-agents": "llm-agents",
         "nix-unit": "nix-unit",
         "nixpkgs": "nixpkgs",
-        "openai-skills": "openai-skills",
         "systems": "systems"
       }
     },
