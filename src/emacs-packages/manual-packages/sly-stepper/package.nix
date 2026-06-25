@@ -44,6 +44,6 @@ melpaBuild {
       slyPath = "${sly}/share/emacs/site-lisp/elpa/${sly.pname}-${sly.version}";
     in
     ''
-      export EMACSLOADPATH="$EMACSLAODPATH:${slyPath}:${slyPath}/lib:${slyPath}/contrib"
+      export EMACSLOADPATH="$EMACSLOADPATH:${slyPath}:${slyPath}/lib:${slyPath}/contrib"
     '';
 }
