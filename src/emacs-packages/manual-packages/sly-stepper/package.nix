@@ -1,8 +1,8 @@
 {
   fetchgit,
   lib,
+  melpaBuild,
   sly,
-  trivialBuild,
   ...
 }:
 let
@@ -26,7 +26,7 @@ let
     maintainers = with maintainers; [ brsvh ];
   };
 in
-trivialBuild rec {
+melpaBuild {
   inherit
     meta
     src
@@ -35,9 +35,7 @@ trivialBuild rec {
 
   pname = "sly-stepper";
 
-  buildInputs = propagatedUserEnvPkgs;
-
-  propagatedUserEnvPkgs = [
+  packageRequires = [
     sly
   ];
 
