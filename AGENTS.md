@@ -1,4 +1,4 @@
-# AGENTS.md
+# README for AGENTS
 
 ## General response preferences
 
@@ -30,12 +30,8 @@
 
 ## Coding rules
 
-- Keep Nix changes consistent with the surrounding module style.
-- After changing Nix code, format the affected files with the repository
-  formatter, normally `nix fmt` from the repository root.
-- For broader Nix changes, run the relevant checks, normally `nix flake check`,
-  unless the change scope or environment makes that impractical. If checks are
-  not run, say so explicitly.
+- When writing, changing, generating, reviewing, or restyling Nix code, use the
+  `nix-coding` skill.
 
 ## Commit message rules
 
