@@ -1,4 +1,5 @@
 {
+  applyPatches,
   fetchgit,
   lib,
   melpaBuild,
@@ -13,10 +14,16 @@ let
 
   version = "0.1";
 
-  src = fetchgit {
-    url = "https://github.com/joaotavora/sly-stepper.git";
-    rev = "da84e3bba8466c2290c2dc7c27d7f4c48c27b39e";
-    hash = "sha256-gMbmG42gxaQrgDUVySbGGpayxDM3pKAgDvYpd9KZ4B4=";
+  src = applyPatches {
+    src = fetchgit {
+      url = "https://github.com/joaotavora/sly-stepper.git";
+      rev = "da84e3bba8466c2290c2dc7c27d7f4c48c27b39e";
+      hash = "sha256-gMbmG42gxaQrgDUVySbGGpayxDM3pKAgDvYpd9KZ4B4=";
+    };
+
+    patches = [
+      ./0001-Make-autoloads-file-use-lexical-binding.patch
+    ];
   };
 
   meta = {

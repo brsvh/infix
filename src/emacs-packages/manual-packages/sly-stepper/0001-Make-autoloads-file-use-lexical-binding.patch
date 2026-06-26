@@ -1,0 +1,23 @@
+From 82c10e6cc38e4410cd15dd490bd06f4a189ee388 Mon Sep 17 00:00:00 2001
+From: Bingshan Chang <chang@bingshan.org>
+Date: Fri, 26 Jun 2026 09:23:39 +0800
+Subject: [PATCH] Make autoloads file use lexical-binding
+
+* sly-stepper-autoloads.el: Enable lexical-binding.
+---
+ sly-stepper-autoloads.el | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/sly-stepper-autoloads.el b/sly-stepper-autoloads.el
+index 2c772f0..e53b734 100644
+--- a/sly-stepper-autoloads.el
++++ b/sly-stepper-autoloads.el
+@@ -1,4 +1,4 @@
+-;;; sly-stepper-autoloads.el --- automatically extracted autoloads
++;;; sly-stepper-autoloads.el --- automatically extracted autoloads -*- lexical-binding: t -*-
+ ;;
+ ;;; Code:
+ 
+-- 
+2.54.0
+
