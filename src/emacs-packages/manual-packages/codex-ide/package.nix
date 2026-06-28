@@ -35,6 +35,8 @@ melpaBuild {
 
   pname = "codex-ide";
 
+  files = ''(:defaults ("bin" "bin/*"))'';
+
   packageRequires = [
     transient
   ];
