@@ -2,7 +2,7 @@
 name: nix-emacs-package-initial
 description: >-
   Package a new Emacs Lisp repository into this repository's
-  src/emacs-packages/manual-packages using a Nix trivialBuild expression. Use
+  src/emacs-packages/manual-packages using a Nix melpaBuild expression. Use
   when the user invokes $nix-emacs-package-initial or asks to add or package an
   Emacs Lisp package from a git repository into manual-packages. Require the
   user to provide a repository URL before changing package files.
@@ -91,7 +91,7 @@ the appropriate approval rather than failing.
      dependency-one,
      fetchgit,
      lib,
-     trivialBuild,
+     melpaBuild,
      ...
    }:
    let
@@ -115,7 +115,7 @@ the appropriate approval rather than failing.
        maintainers = with maintainers; [ brsvh ];
      };
    in
-   trivialBuild rec {
+   melpaBuild {
      inherit
        meta
        src
@@ -124,19 +124,17 @@ the appropriate approval rather than failing.
 
      pname = "package-name";
 
-     buildInputs = propagatedUserEnvPkgs;
-
-     propagatedUserEnvPkgs = [
+     packageRequires = [
        dependency-one
      ];
    }
    ```
 
-1. Keep `propagatedUserEnvPkgs` empty only when the package has no non-built-in
+1. Keep `packageRequires` empty only when the package has no non-built-in
    runtime dependencies:
 
    ```nix
-   propagatedUserEnvPkgs = [ ];
+   packageRequires = [ ];
    ```
 
 1. Add special build hooks only when source inspection or a failed build shows
