@@ -1,16 +1,19 @@
 ---
-name: nix-update-manual-emacs-package
+name: nix-emacs-package-update
 description: >-
   Check and update one existing Emacs Lisp package under this repository's
   src/emacs-packages/manual-packages. Use when the user invokes
-  $nix-update-manual-emacs-package PACKAGE or asks to check/update a single
-  manual Emacs package pin, revision, hash, or version. Do not use this skill
-  for bulk updates across all manual-packages.
+  $nix-emacs-package-update PACKAGE or asks to check, update, or bump a single
+  manual Emacs package pin, revision, hash, or version. Do not use for bulk
+  updates across all manual-packages.
+compatibility: >-
+  Requires nix, nix-prefetch-git, and outgoing network access to fetch Git
+  refs. The target repository must be an Infix Nix flake checkout.
 ---
 
-# Nix Update Manual Emacs Package
+# Nix Emacs Package Update
 
-Use this skill to check one existing package at
+Check one existing package at
 `src/emacs-packages/manual-packages/<pname>/package.nix` against the current
 default branch head of its `src.url`.
 
@@ -22,7 +25,7 @@ manual package unless the user explicitly asks for a different workflow.
 
 Work from the repository root. The target file is:
 
-```sh
+```
 src/emacs-packages/manual-packages/<pname>/package.nix
 ```
 
@@ -31,18 +34,14 @@ If the file does not exist, report that directly and make no changes.
 ## Tool Setup
 
 Use the repository's available tools when present. When a required command is
-missing, run it through a temporary Nix environment instead of asking the user
-to install it globally.
+missing, run it through a temporary Nix environment:
 
-Common fallbacks:
-
-```sh
+```
 nix shell nixpkgs#nix-prefetch-git -c nix-prefetch-git --quiet --url <url>
 nix shell nixpkgs#treefmt nixpkgs#nixfmt-rfc-style -c treefmt <package.nix>
 ```
 
-If the repo has a working development shell, `nix develop -c <command>` is also
-acceptable. If `nix` itself is unavailable, report that as a blocker.
+If `nix` itself is unavailable, report that as a blocker.
 
 If `nix-prefetch-git` fails because network access is sandboxed, rerun it with
 the appropriate approval rather than treating the package as up to date.
@@ -61,7 +60,7 @@ the appropriate approval rather than treating the package as up to date.
 
 1. Fetch the current upstream default branch head:
 
-   ```sh
+   ```
    nix-prefetch-git --quiet --url <url>
    ```
 
@@ -97,8 +96,8 @@ the appropriate approval rather than treating the package as up to date.
 
 1. Edit only the target package file.
 
-   Use `$nix-code-refactor` conventions when changing `.nix` code. Keep the edit
-   limited to:
+   Follow `$nix-code-refactor` conventions when changing `.nix` code. Keep the
+   edit limited to:
 
    - `version`, only when source evidence requires it;
    - `src.rev`;
@@ -109,7 +108,7 @@ the appropriate approval rather than treating the package as up to date.
 
 1. Format the changed file with the repository formatter:
 
-   ```sh
+   ```
    treefmt src/emacs-packages/manual-packages/<pname>/package.nix
    ```
 
@@ -120,13 +119,13 @@ the appropriate approval rather than treating the package as up to date.
 
 Evaluate the updated package version through the Emacs package overlay:
 
-```sh
+```
 nix eval --impure --expr 'let flake = builtins.getFlake (toString ./.); pkgs = import flake.inputs.nixpkgs { system = builtins.currentSystem; overlays = [ flake.overlays.emacs-packages ]; }; in pkgs.emacsPackages.<pname>.version'
 ```
 
 Build the package through the same overlay without creating a `result` symlink:
 
-```sh
+```
 nix build --no-link --impure --expr 'let flake = builtins.getFlake (toString ./.); pkgs = import flake.inputs.nixpkgs { system = builtins.currentSystem; overlays = [ flake.overlays.emacs-packages ]; }; in pkgs.emacsPackages.<pname>'
 ```
 
