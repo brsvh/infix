@@ -1,14 +1,17 @@
 ---
-name: nix-initial-manual-emacs-package
+name: nix-emacs-package-initial
 description: >-
   Package a new Emacs Lisp repository into this repository's
   src/emacs-packages/manual-packages using a Nix trivialBuild expression. Use
-  when the user invokes $nix-initial-manual-emacs-package or asks to
-  add/package an Emacs Lisp package from a git repository into manual-packages.
-  Require the user to provide a repository URL before changing package files.
+  when the user invokes $nix-emacs-package-initial or asks to add or package an
+  Emacs Lisp package from a git repository into manual-packages. Require the
+  user to provide a repository URL before changing package files.
+compatibility: >-
+  Requires nix, nix-prefetch-git, and outgoing network access to fetch Git
+  refs. The target repository must be an Infix Nix flake checkout.
 ---
 
-# Nix Initial Manual Emacs Package
+# Nix Emacs Package Initial
 
 Use this skill to add a git-hosted Emacs Lisp package under
 `src/emacs-packages/manual-packages`.
@@ -16,11 +19,26 @@ Use this skill to add a git-hosted Emacs Lisp package under
 ## Required Input
 
 Require a repository URL in the user's request. If the request does not include
-a URL, ask for one concise follow-up question and do not create files yet.
+a URL, ask one concise follow-up question and do not create files yet.
 
 Optional inputs may include package name, revision, version, description,
 license, homepage, or dependencies. Infer missing values from the repository
 when practical, and state any material assumption in the final answer.
+
+## Tool Setup
+
+Use the repository's available tools when present. When a required command is
+missing, run it through a temporary Nix environment:
+
+```
+nix shell nixpkgs#nix-prefetch-git -c nix-prefetch-git --quiet --url <url>
+nix shell nixpkgs#treefmt nixpkgs#nixfmt-rfc-style -c treefmt <package.nix>
+```
+
+If `nix` itself is unavailable, report that as a blocker.
+
+If `nix-prefetch-git` fails because network access is sandboxed, rerun it with
+the appropriate approval rather than failing.
 
 ## Workflow
 
@@ -28,7 +46,7 @@ when practical, and state any material assumption in the final answer.
 
 1. Inspect nearby package expressions in `src/emacs-packages/manual-packages`.
 
-1. Use `$nix-code-refactor` when writing or changing `.nix` code.
+1. Use `$nix-coding` when writing or changing `.nix` code.
 
 1. Determine the package name:
 
@@ -130,7 +148,7 @@ when practical, and state any material assumption in the final answer.
 Format changed Nix files with the repository formatter:
 
 ```sh
-nix fmt
+treefmt src/emacs-packages/manual-packages/<pname>/package.nix
 ```
 
 Evaluate the package through the Emacs package overlay:
@@ -139,10 +157,10 @@ Evaluate the package through the Emacs package overlay:
 nix eval --impure --expr 'let flake = builtins.getFlake (toString ./.); pkgs = import flake.inputs.nixpkgs { system = builtins.currentSystem; overlays = [ flake.overlays.emacs-packages ]; }; in pkgs.emacsPackages.<pname>.pname'
 ```
 
-Build the package through the same overlay:
+Build the package through the same overlay without creating a `result` symlink:
 
 ```sh
-nix build --impure --expr 'let flake = builtins.getFlake (toString ./.); pkgs = import flake.inputs.nixpkgs { system = builtins.currentSystem; overlays = [ flake.overlays.emacs-packages ]; }; in pkgs.emacsPackages.<pname>'
+nix build --no-link --impure --expr 'let flake = builtins.getFlake (toString ./.); pkgs = import flake.inputs.nixpkgs { system = builtins.currentSystem; overlays = [ flake.overlays.emacs-packages ]; }; in pkgs.emacsPackages.<pname>'
 ```
 
 If evaluation or build fails because a dependency is missing, determine whether

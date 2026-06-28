@@ -1,4 +1,0 @@
-interface:
-  display_name: "Initial Manual Emacs Package"
-  short_description: "Package manual Emacs Lisp repos"
-  default_prompt: "Use $nix-initial-manual-emacs-package with the repository URL to package this Emacs Lisp project."
