@@ -15,8 +15,8 @@ let
 
   src = fetchgit {
     url = "https://github.com/dgillis/emacs-codex-ide.git";
-    rev = "1418bd7b5f4e44706f4ab622b9b9e76f475ed4ae";
-    hash = "sha256-Mve+Jy6jdojRK+c5v7rqr9PIkP1RT7/TkLG3foRdae8=";
+    rev = "eeb1dba3b8249b254b97caf7c0f1df100419e9f1";
+    hash = "sha256-dzOT82/9c2Wm9qJrNv3POYoqoC9Pi2VgWTHzA9Tn/YI=";
   };
 
   meta = {
