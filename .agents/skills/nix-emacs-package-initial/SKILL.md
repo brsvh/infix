@@ -42,104 +42,105 @@ the appropriate approval rather than failing.
 
 ## Workflow
 
-1. Work from the repository root.
+01. Work from the repository root.
 
-1. Inspect nearby package expressions in `src/emacs-packages/manual-packages`.
+02. Inspect nearby package expressions in `src/emacs-packages/manual-packages`.
 
-1. Use `$nix-coding` when writing or changing `.nix` code.
+03. Use `$nix-coding` when writing or changing `.nix` code.
 
-1. Determine the package name:
+04. Determine the package name:
 
-   - Prefer the main Emacs Lisp package name from the source.
-   - Otherwise derive it from the repository name by removing common prefixes
-     such as `emacs-` and suffixes such as `.el`.
-   - Use the same value for the directory name and `pname` unless the source
-     package header gives a more precise package name.
+    - Prefer the main Emacs Lisp package name from the source.
+    - Otherwise derive it from the repository name by removing common prefixes
+      such as `emacs-` and suffixes such as `.el`.
+    - Use the same value for the directory name and `pname` unless the source
+      package header gives a more precise package name.
 
-1. Fetch and pin the source:
+05. Fetch and pin the source:
 
-   ```sh
-   nix-prefetch-git --url <repository-url> --rev <revision> --quiet
-   ```
+    ```sh
+    nix-prefetch-git --url <repository-url> --rev <revision> --quiet
+    ```
 
-   If no revision is supplied, use the repository's current default branch head:
+    If no revision is supplied, use the repository's current default branch
+    head:
 
-   ```sh
-   nix-prefetch-git --url <repository-url> --quiet
-   ```
+    ```sh
+    nix-prefetch-git --url <repository-url> --quiet
+    ```
 
-   Use the returned `rev` and SRI `hash` when available. If only `sha256` is
-   returned, use that hash value.
+    Use the returned `rev` and SRI `hash` when available. If only `sha256` is
+    returned, use that hash value.
 
-1. Inspect the fetched source path from `nix-prefetch-git`:
+06. Inspect the fetched source path from `nix-prefetch-git`:
 
-   - Read the main `.el` file headers for `Package-Requires`, `Version`,
-     `Package-Version`, `URL`, and `Keywords`.
-   - Ignore the Emacs version requirement as a propagated package dependency.
-   - Treat built-in Emacs libraries as built-ins unless this repository already
-     packages them explicitly.
-   - Map required package names to Emacs package attributes available in the
-     package scope.
-   - Read the license file or source header to choose `lib.licenses.*`.
+    - Read the main `.el` file headers for `Package-Requires`, `Version`,
+      `Package-Version`, `URL`, and `Keywords`.
+    - Ignore the Emacs version requirement as a propagated package dependency.
+    - Treat built-in Emacs libraries as built-ins unless this repository already
+      packages them explicitly.
+    - Map required package names to Emacs package attributes available in the
+      package scope.
+    - Read the license file or source header to choose `lib.licenses.*`.
 
-1. Create `src/emacs-packages/manual-packages/<pname>/package.nix`.
+07. Create `src/emacs-packages/manual-packages/<pname>/package.nix`.
 
-1. Follow the local manual package pattern:
+08. Follow the local manual package pattern:
 
-   ```nix
-   {
-     dependency-one,
-     fetchgit,
-     lib,
-     melpaBuild,
-     ...
-   }:
-   let
-     inherit (lib)
-       licenses
-       maintainers
-       ;
+    ```nix
+    {
+      dependency-one,
+      fetchgit,
+      lib,
+      melpaBuild,
+      ...
+    }:
+    let
+      inherit (lib)
+        licenses
+        maintainers
+        ;
 
-     version = "0.1.0";
+      version = "0.1.0";
 
-     src = fetchgit {
-       url = "https://example.org/user/package.git";
-       rev = "<commit>";
-       hash = "sha256-...";
-     };
+      src = fetchgit {
+        url = "https://example.org/user/package.git";
+        rev = "<commit>";
+        hash = "sha256-...";
+      };
 
-     meta = {
-       description = "Short package description";
-       homepage = "https://example.org/user/package";
-       license = licenses.gpl3Plus;
-       maintainers = with maintainers; [ brsvh ];
-     };
-   in
-   melpaBuild {
-     inherit
-       meta
-       src
-       version
-       ;
+      meta = {
+        description = "Short package description";
+        homepage = "https://example.org/user/package";
+        license = licenses.gpl3Plus;
+        maintainers = with maintainers; [ brsvh ];
+      };
+    in
+    melpaBuild {
+      inherit
+        meta
+        src
+        version
+        ;
 
-     pname = "package-name";
+      pname = "package-name";
 
-     packageRequires = [
-       dependency-one
-     ];
-   }
-   ```
+      packageRequires = [
+        dependency-one
+      ];
+    }
+    ```
 
-1. Keep `packageRequires` empty only when the package has no non-built-in
-   runtime dependencies:
+09. Keep `packageRequires` empty only when the package has no non-built-in
+    runtime dependencies:
 
-   ```nix
-   packageRequires = [ ];
-   ```
+    ```nix
+    packageRequires = [ ];
+    ```
 
-1. Add special build hooks only when source inspection or a failed build shows
-   they are needed. Prefer the smallest local fix over broad environment
-   changes.
+10. Add special build hooks only when source inspection or a failed build shows
+    they are needed. Prefer the smallest local fix over broad environment
+    changes.
 
 ## Validation
 

@@ -58,7 +58,7 @@ the appropriate approval rather than treating the package as up to date.
 
    Also record the current `version` binding.
 
-1. Fetch the current upstream default branch head:
+2. Fetch the current upstream default branch head:
 
    ```
    nix-prefetch-git --quiet --url <url>
@@ -71,12 +71,12 @@ the appropriate approval rather than treating the package as up to date.
    - `path`
    - `date`, when version fallback needs a commit date
 
-1. Compare revisions.
+3. Compare revisions.
 
    If the returned `rev` equals the current `src.rev`, make no package changes.
    Report that the package is already current and include the checked revision.
 
-1. If the returned `rev` differs, inspect the fetched source at the returned
+4. If the returned `rev` differs, inspect the fetched source at the returned
    `path` before editing.
 
    Determine whether `version` needs an update from source evidence:
@@ -94,7 +94,7 @@ the appropriate approval rather than treating the package as up to date.
      release version, do not invent a new version. Keep the current version and
      state that no source version evidence required a change.
 
-1. Edit only the target package file.
+5. Edit only the target package file.
 
    Follow `$nix-code-refactor` conventions when changing `.nix` code. Keep the
    edit limited to:
@@ -106,7 +106,7 @@ the appropriate approval rather than treating the package as up to date.
    Do not refactor unrelated package structure, dependencies, metadata, or
    formatting.
 
-1. Format the changed file with the repository formatter:
+6. Format the changed file with the repository formatter:
 
    ```
    treefmt src/emacs-packages/manual-packages/<pname>/package.nix
