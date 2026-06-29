@@ -276,6 +276,8 @@ let
 
             options = [
               "--extensions=frontmatter"
+              "--extensions=gfm"
+              "--number"
               "--wrap=80"
             ];
           };
@@ -302,6 +304,7 @@ let
           mdformatWithPlugins = pkgs.mdformat.withPlugins (
             ps: with ps; [
               mdformat-frontmatter
+              mdformat-gfm
             ]
           );
         in
