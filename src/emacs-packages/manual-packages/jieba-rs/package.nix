@@ -19,8 +19,8 @@ let
 
   src = fetchgit {
     url = "https://github.com/brsvh/emacs-jieba-rs";
-    rev = "8fc69235cde11f097f98c1750741a51472b5a1aa";
-    hash = "sha256-tvL4AfngU/FMdZ9TtgzOLq5w/mUWjX2X6u4eLnIZ5fc=";
+    rev = "63ae6a7a25f7060ac7c31fa7b184e90d4f460517";
+    hash = "sha256-S9lCAJXuySslnPROCGTQSQmGiLihZFysouC9h57zIQg=";
   };
 
   module = rustPlatform.buildRustPackage {
@@ -35,7 +35,7 @@ let
       "--lib"
     ];
 
-    cargoHash = "sha256-R8Ow+SX+eCTT9cpqrpaUsI5GMQN7e/KW2EzY3rNqKEA=";
+    cargoHash = "sha256-s+xDbsO6G5rDv21NvHS7yMWMcxsX7/NZivepXTQcKRg=";
   };
 
   meta = {
