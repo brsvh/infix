@@ -18,6 +18,7 @@ let
     (require 'cl-lib)
     (require 'editorconfig)
     (require 'editorconfig-tools nil t)
+    (require 'macroexp)
 
     (setq auto-save-default nil
           backup-inhibited t
@@ -122,6 +123,84 @@ let
               (message-log-max nil))
           (basic-save-buffer))))
 
+    ;; Visiting source does not apply its `declare' forms.  Read safe
+    ;; indentation declarations without evaluating the source.
+    (defun elisp-format--definition-indent-spec (form)
+      (when (and (memq (car-safe form)
+                       '(cl-defmacro
+                         cl-defsubst
+                         cl-defun
+                         defmacro
+                         defsubst
+                         defun))
+                 (symbolp (nth 1 form)))
+        (let ((declarations
+               (car (macroexp-parse-body (nthcdr 3 form))))
+              indent-spec)
+          (dolist (declaration declarations)
+            (when (eq (car-safe declaration) 'declare)
+              (let ((indent (assq 'indent (cdr declaration))))
+                (when (and (consp (cdr indent))
+                           (null (cddr indent))
+                           (or (integerp (cadr indent))
+                               (eq (cadr indent) 'defun)))
+                  (setq indent-spec (cadr indent))))))
+          (when indent-spec
+            (cons (nth 1 form) indent-spec)))))
+
+    (defun elisp-format--collect-indent-specs ()
+      (when (derived-mode-p 'emacs-lisp-mode)
+        (save-excursion
+          (goto-char (point-min))
+          (let ((read-circle nil)
+                (read-symbol-shorthands nil)
+                indent-specs)
+            (condition-case nil
+                (while t
+                  (let* ((form (read (current-buffer)))
+                         (indent-spec
+                          (ignore-errors
+                            (elisp-format--definition-indent-spec
+                             form))))
+                    (when indent-spec
+                      (setq indent-specs
+                            (cons
+                             indent-spec
+                             (assq-delete-all
+                              (car indent-spec)
+                              indent-specs))))))
+              (end-of-file nil)
+              (error nil))
+            indent-specs))))
+
+    (defun elisp-format--install-indent-specs ()
+      (let (saved-properties)
+        (dolist (indent-spec (elisp-format--collect-indent-specs))
+          (let ((symbol (car indent-spec)))
+            (push
+             (list
+              symbol
+              (plist-member
+               (symbol-plist symbol)
+               'lisp-indent-function)
+              (get symbol 'lisp-indent-function))
+             saved-properties)
+            (put
+             symbol
+             'lisp-indent-function
+             (cdr indent-spec))))
+        saved-properties))
+
+    (defun elisp-format--restore-indent-properties (saved-properties)
+      (dolist (saved-property saved-properties)
+        (let ((symbol (nth 0 saved-property)))
+          (if (nth 1 saved-property)
+              (put
+               symbol
+               'lisp-indent-function
+               (nth 2 saved-property))
+            (cl-remprop symbol 'lisp-indent-function)))))
+
     (defun elisp-format--format-file (file)
       (let ((buffer nil)
             (file-name (expand-file-name file)))
@@ -137,13 +216,19 @@ let
                   (with-current-buffer buffer
                     (elisp-format--check-mode file-name)
                     (elisp-format--apply-editorconfig)
-                    (cl-letf (((symbol-function 'make-progress-reporter)
-                               (lambda (&rest _) nil))
-                              ((symbol-function 'progress-reporter-update)
-                               (lambda (&rest _) nil))
-                              ((symbol-function 'progress-reporter-done)
-                               (lambda (&rest _) nil)))
-                      (indent-region (point-min) (point-max)))
+                    (let ((saved-properties
+                           (elisp-format--install-indent-specs)))
+                      (unwind-protect
+                          (cl-letf
+                              (((symbol-function 'make-progress-reporter)
+                                (lambda (&rest _) nil))
+                               ((symbol-function 'progress-reporter-update)
+                                (lambda (&rest _) nil))
+                               ((symbol-function 'progress-reporter-done)
+                                (lambda (&rest _) nil)))
+                            (indent-region (point-min) (point-max)))
+                        (elisp-format--restore-indent-properties
+                         saved-properties)))
                     (elisp-format--save-buffer)))
               (when (buffer-live-p buffer)
                 (kill-buffer buffer)))
