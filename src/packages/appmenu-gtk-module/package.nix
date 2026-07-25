@@ -32,7 +32,13 @@ stdenv.mkDerivation (finalAttrs: {
       --replace-fail "gtk3.get_variable(pkgconfig:'libdir')" "get_option('libdir')"
   '';
 
+  postFixup = ''
+    glib-compile-schemas \
+      "$out/share/gsettings-schemas/${finalAttrs.pname}-${finalAttrs.version}/glib-2.0/schemas"
+  '';
+
   nativeBuildInputs = [
+    glib
     meson
     ninja
     pkg-config
