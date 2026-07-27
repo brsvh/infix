@@ -50,7 +50,8 @@ let
     owner = "hypengw";
     repo = "QmlMaterial";
     rev = "628f580b60f8e7195447ec9e27dae5cce5b0fcbc";
-    hash = "sha256-RM+g+M602CXKIx432XiW4Ev3RjIsOUsLvCiuTJDNb3o=";
+    fetchLFS = true;
+    hash = "sha256-38/aUJLAtlccVc9rO2f/gDkCXfu/Pf8c3YTXv39w2+o=";
   };
 
   rstdSrc = fetchFromGitHub {
@@ -92,7 +93,8 @@ in
       owner = "waywallen";
       repo = "waywallen";
       tag = "v${finalAttrs.version}";
-      hash = "sha256-i7kvhOHiJZaiBFLRWSfbLmTkiAx//cSFAraG2rpb5I4=";
+      fetchLFS = true;
+      hash = "sha256-I8+NlqzHq/pJ75wsI0po1mahRBdGdw96ptVRt9H/Ip0=";
     };
 
     cargoHash = "sha256-M6LQixcLvub3QpFPrYS5Cc63AYQ7xLJoMvpuhKonbT4=";
