@@ -1,0 +1,31 @@
+diff --git a/codex-ide-transient.el b/codex-ide-transient.el
+index 217e899..dbcb899 100644
+--- a/codex-ide-transient.el
++++ b/codex-ide-transient.el
+@@ -445,7 +445,7 @@
+                            codex-ide-emacs-bridge-require-approval)
+   (message "Codex IDE configuration saved"))
+ 
+-;;;###autoload
++;;;###autoload(autoload 'codex-ide-menu "codex-ide-transient" nil t)
+ (transient-define-prefix codex-ide-menu ()
+ 			 "Open the main Codex IDE menu."
+ 			 [:description codex-ide--session-status]
+@@ -473,7 +473,7 @@
+ 			  ["Navigation"
+ 			   ("C-g" "Exit" transient-quit-all)]])
+ 
+-;;;###autoload
++;;;###autoload(autoload 'codex-ide-agent-config-menu "codex-ide-transient" nil t)
+ (transient-define-prefix codex-ide-agent-config-menu ()
+ 			 "Open the Codex IDE agent configuration menu."
+ 			 [["Agent Config"
+@@ -506,7 +506,7 @@
+ (add-hook 'transient-post-exit-hook
+           #'codex-ide--config-menu-commit-history-group)
+ 
+-;;;###autoload
++;;;###autoload(autoload 'codex-ide-debug-menu "codex-ide-transient" nil t)
+ (transient-define-prefix codex-ide-debug-menu ()
+ 			 "Open a small debug/status menu for Codex IDE."
+ 			 ["Codex IDE Debug"

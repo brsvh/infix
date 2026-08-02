@@ -1,4 +1,5 @@
 {
+  applyPatches,
   fetchgit,
   lib,
   melpaBuild,
@@ -13,10 +14,16 @@ let
 
   version = "0.3.2";
 
-  src = fetchgit {
-    url = "https://github.com/dgillis/emacs-codex-ide.git";
-    rev = "eeb1dba3b8249b254b97caf7c0f1df100419e9f1";
-    hash = "sha256-dzOT82/9c2Wm9qJrNv3POYoqoC9Pi2VgWTHzA9Tn/YI=";
+  src = applyPatches {
+    src = fetchgit {
+      url = "https://github.com/dgillis/emacs-codex-ide.git";
+      rev = "5eba84dd58ad8609e8f7e8c4159d4aac90b4f303";
+      hash = "sha256-4Ze/gJv7ogFV0GNJOWGdCI31PluLR4himepCrhT1AVM=";
+    };
+
+    patches = [
+      ./fix-transient-command-autoloads.patch
+    ];
   };
 
   meta = {
