@@ -1,0 +1,21 @@
+diff --git a/scripts/inncheck.in b/scripts/inncheck.in
+index 5ad22cc..a873529 100644
+--- a/scripts/inncheck.in
++++ b/scripts/inncheck.in
+@@ -463,13 +463,14 @@ sub expire_ctl {
+         if (($v) = m@/remember/:(.+)@) {
+             eprint "$file:$line: more than one /remember/ line.\n"
+               if $rem++;
+-            if ($v !~ /[\d\.]+/) {
++            if ($v !~ /\A(?:never|[\d\.]+)\z/i) {
+                 eprint "$file:$line: illegal value `$v' for remember.\n";
+                 next INPUTEXPIRECTL;
+             }
+             eprint "$file:$line: are you sure about your /remember/ value?\n"
+               ##  These are arbitrary "sane" values.
+-              if $v != 0 && ($v > 60.0 || $v < 5.0);
++              if lc($v) ne 'never'
++              && $v != 0 && ($v > 60.0 || $v < 5.0);
+             next INPUTEXPIRECTL;
+         }
+
