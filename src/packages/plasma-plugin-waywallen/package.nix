@@ -15,21 +15,14 @@
 }:
 stdenv.mkDerivation (finalAttrs: {
   pname = "plasma-plugin-waywallen";
-  version = "0.2.9";
+  version = "0.3.3";
 
   src = fetchFromGitHub {
     owner = "waywallen";
     repo = "waywallen-display";
     tag = "v${finalAttrs.version}";
-    hash = "sha256-N+QjNfDu3RpfDWPE42miZ5i37CV68Y5A9EkzWUAolVI=";
+    hash = "sha256-zqDI++m4lMeggrjq7GtTso6pn6NDVqvipEFvpDe0lC8=";
   };
-
-  postPatch = ''
-    ui=extensions/kde/package/contents/ui
-    cp "$ui/ImportTestEmbed.qml" "$ui/ImportTest.qml"
-    cp "$ui/WaywallenSurfaceEmbed.qml" "$ui/WaywallenSurface.qml"
-    rm "$ui/ImportTestEmbed.qml" "$ui/WaywallenSurfaceEmbed.qml"
-  '';
 
   cmakeFlags = [
     (lib.cmakeBool "WAYWALLEN_DISPLAY_PLUGIN_QML" true)
@@ -76,7 +69,7 @@ stdenv.mkDerivation (finalAttrs: {
     archives=(waywallen-kde-*-embed.zip)
     (( ''${#archives[@]} == 1 ))
     wallpapers=$out/share/plasma/wallpapers
-    qmlModule=$wallpapers/org.waywallen.kde/contents/ui
+    qmlModule=$wallpapers/org.waywallen.kde/contents/ui/Plugin
     qmlModule=$qmlModule/WaywallenDisplayEmbed
     install -d "$wallpapers"
     unzip -q "''${archives[0]}" -d "$wallpapers"
