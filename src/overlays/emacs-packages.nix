@@ -76,8 +76,8 @@ final: prev: {
                   finalAttrs: prevAttrs: {
                     src = fetchgit {
                       url = "https://github.com/brsvh/switch-window.git";
-                      rev = "3924c3f05084ce36a6434f1c08de411d6817988e";
-                      hash = "sha256-upXOFJr+SpS21LZNwYjaE0U3TXsNT+YU/tjP5vSJqbA=";
+                      rev = "869f2a668c6a0f7d5b23b0d52fa8f6be20f41cb1";
+                      hash = "sha256-ZWp3+aPFh1h7ib0+InmPbsZBYwpAyFlIuAltM7No13M=";
                     };
                   }
                 );
