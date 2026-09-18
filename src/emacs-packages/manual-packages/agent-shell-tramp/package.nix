@@ -16,8 +16,8 @@ let
 
   src = fetchgit {
     url = "https://github.com/junyi-hou/agent-shell-tramp.git";
-    rev = "ebdeb204973beb116017a977bee52cdced78e447";
-    hash = "sha256-G1Q+hvwZ3iBax0f3/7tM1/7geYayEH6QzkQcz32+J0w=";
+    rev = "14560d42440c17d9b59fc18d304687641ddf06e5";
+    hash = "sha256-J4TBVkhlaso+TQvFLBwnWqGu5q2eCW8978mYuD1BbqM=";
   };
 
   meta = {
