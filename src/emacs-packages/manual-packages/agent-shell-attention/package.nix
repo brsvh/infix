@@ -15,8 +15,8 @@ let
 
   src = fetchgit {
     url = "https://github.com/ultronozm/agent-shell-attention.el.git";
-    rev = "18e580806775b41a9c899e79c6765f4d937913e7";
-    hash = "sha256-Y/jb9e0YxyEwQ0LFYwAu/PMqBnZXlOf5JiQJNISz4+0=";
+    rev = "ae2df16c1d481d0e182cc85fafa62c53431aab36";
+    hash = "sha256-eukR9iviR5bpAfwB7Sq130TGMNR8OI+QtJSSXXnUiqc=";
   };
 
   meta = {
