@@ -11,12 +11,12 @@ let
     maintainers
     ;
 
-  version = "0.5.2";
+  version = "0.5.3";
 
   src = fetchgit {
     url = "https://github.com/jdtsmith/org-modern-indent.git";
-    rev = "ebf9a8e571db523dc6e4cd9ed80d0e0626983ae4";
-    hash = "sha256-+q7KmbU8A+uR61BSa528vYbdFSj2WGsFWYW/5q7J9Kw=";
+    rev = "86bd83ee1ad95f123810eb3b116beb543db1960a";
+    hash = "sha256-vQzYk5qejCBehpbxkMceOMsmeLyjnAstpezZw/ZR1jQ=";
   };
 
   meta = {
