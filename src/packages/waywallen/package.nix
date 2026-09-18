@@ -1,9 +1,16 @@
 {
   autoPatchelfHook,
+  cacert,
+  cargo,
   cmake,
+  curl,
   fetchFromGitHub,
+  fetchurl,
   ffmpeg,
+  git,
   glslang,
+  gnutar,
+  gzip,
   lib,
   libgbm,
   libglvnd,
@@ -14,10 +21,11 @@
   pkg-config,
   protobuf,
   qt6,
-  rustPlatform,
+  rustc,
+  stdenvNoCC,
   vulkan-headers,
   vulkan-loader,
-  ...
+  writeText,
 }:
 let
   inherit (lib)
@@ -25,159 +33,277 @@ let
     maintainers
     ;
 
-  corrosionSrc = fetchFromGitHub {
-    owner = "corrosion-rs";
-    repo = "corrosion";
-    rev = "1499b14e4906a2890f5cee1547c8848db261753d";
-    hash = "sha256-ppuDNObfKhneD9AlnPAvyCRHKW3BidXKglD1j/LE9CM=";
-  };
+  version = "0.3.9";
+  litoVersion = "0.8.1";
 
-  ncrequestSrc = fetchFromGitHub {
-    owner = "hypengw";
-    repo = "ncrequest";
-    rev = "37d3c588fb1307dd6c40fbc8681790b45eb5402a";
-    hash = "sha256-j18+Pwr7Kj1VdgjmsLsn1HIg2lF6dXj2N5up9ymcnNQ=";
-  };
-
-  qextraSrc = fetchFromGitHub {
-    owner = "hypengw";
-    repo = "QExtra";
-    rev = "2106172c8c55693248661f5ddfc0623ff489285d";
-    hash = "sha256-vxe4mrK6lq6hhniU5gTqpJ9AX9JHUruZ5RXPOnp/gPc=";
-  };
-
-  qmlMaterialSrc = fetchFromGitHub {
-    owner = "hypengw";
-    repo = "QmlMaterial";
-    rev = "628f580b60f8e7195447ec9e27dae5cce5b0fcbc";
-    fetchLFS = true;
-    hash = "sha256-38/aUJLAtlccVc9rO2f/gDkCXfu/Pf8c3YTXv39w2+o=";
-  };
-
-  rstdSrc = fetchFromGitHub {
-    owner = "litocpp";
-    repo = "rstd";
-    rev = "bf5f855ddb1b84390306e0913b89149ac72a3510";
-    hash = "sha256-/O6FK7m+JE897j3IHWWnyIuxeQPzkg6Uz0LaYeydIHY=";
-  };
-
-  vmaSrc = fetchFromGitHub {
-    owner = "GPUOpen-LibrariesAndSDKs";
-    repo = "VulkanMemoryAllocator";
-    rev = "3aa921224c154a0d2c43912bc88e1c42ce1f7607";
-    hash = "sha256-LBZJcom7G7maF9wpUVeVEJQAJwGy6365INk3VD0/0PM=";
-  };
-
-  vvkSrc = fetchFromGitHub {
-    owner = "litocpp";
-    repo = "vvk";
-    rev = "8fcfd34b43a13ade515f029b0b4209bd3684645f";
-    hash = "sha256-vmS1xQ3oE2CLZtytkvrcJIoKBxp8gS5fxzqL5pbeiDY=";
-  };
-
-  wavsenSrc = fetchFromGitHub {
-    owner = "hypengw";
-    repo = "wavsen";
-    rev = "e49fc62fdc1b57abeabb643daa6ebab96fb3821f";
-    hash = "sha256-TWceTw1Oxgk5TD7RoRB+aA49dgZbweZJpEXFQAVlaX0=";
-  };
-in
-(rustPlatform.buildRustPackage.override {
-  stdenv = llvmPackages_22.stdenv;
-})
-  (finalAttrs: {
-    pname = "waywallen";
-    version = "0.2.6";
-
-    src = fetchFromGitHub {
-      owner = "waywallen";
-      repo = "waywallen";
-      tag = "v${finalAttrs.version}";
-      fetchLFS = true;
-      hash = "sha256-I8+NlqzHq/pJ75wsI0po1mahRBdGdw96ptVRt9H/Ip0=";
+  litoReleases = {
+    aarch64-linux = {
+      arch = "aarch64";
+      hash = "sha256-Hrc5La3kHDuClkg4jDM3RTsoU19J1lxhdEIw5eDMI6E=";
     };
+    x86_64-linux = {
+      arch = "x86_64";
+      hash = "sha256-m/LaN9Lu2VO1OZXZputEDTILjlcAfud50IADQM3kerc=";
+    };
+  };
 
-    cargoHash = "sha256-M6LQixcLvub3QpFPrYS5Cc63AYQ7xLJoMvpuhKonbT4=";
+  litoRelease =
+    litoReleases.${stdenvNoCC.hostPlatform.system}
+      or (throw "lito: unsupported system ${stdenvNoCC.hostPlatform.system}");
 
-    postPatch = ''
-      # QML language-server metadata writes into read-only dependency sources.
-      substituteInPlace ui/CMakeLists.txt \
-        --replace-fail \
-          "set(QT_QML_GENERATE_QMLLS_INI ON)" \
-          "set(QT_QML_GENERATE_QMLLS_INI OFF)"
-    '';
+  lito = stdenvNoCC.mkDerivation {
+    pname = "lito";
+    version = litoVersion;
 
-    configurePhase = "cmakeConfigurePhase";
-
-    # Fortify wrappers become mangled C++ module symbols in rstd.
-    hardeningDisable = [
-      "fortify"
-      "fortify3"
-    ];
-
-    cmakeFlags = [
-      "-DCMAKE_CXX_COMPILER_CLANG_SCAN_DEPS=${lib.getExe' llvmPackages_22.clang-tools "clang-scan-deps"}"
-      "-DCMAKE_LINKER_TYPE=LLD"
-      "-DCMAKE_MODULE_PATH=${qt6.qtgrpc}/lib/cmake/Qt6"
-      "-DProtobuf_ROOT=${protobuf}"
-      "-DQT_INSTALL_QML=lib/qt-6/qml"
-      "-DFETCHDEPS_LOCAL_Corrosion=${corrosionSrc}"
-      "-DFETCHDEPS_LOCAL_QExtra=${qextraSrc}"
-      "-DFETCHDEPS_LOCAL_ncrequest=${ncrequestSrc}"
-      "-DFETCHDEPS_LOCAL_qml_material=${qmlMaterialSrc}"
-      "-DFETCHDEPS_LOCAL_rstd=${rstdSrc}"
-      "-DFETCHDEPS_LOCAL_vma=${vmaSrc}"
-      "-DFETCHDEPS_LOCAL_vvk=${vvkSrc}"
-      "-DFETCHDEPS_LOCAL_wavsen=${wavsenSrc}"
-      "-DWAYWALLEN_CARGO_OFFLINE=ON"
-    ];
+    src = fetchurl {
+      url = "https://github.com/litocpp/lito/releases/download/v${litoVersion}/lito-v${litoVersion}-linux-${litoRelease.arch}.tar.gz";
+      inherit (litoRelease) hash;
+    };
 
     nativeBuildInputs = [
       autoPatchelfHook
-      cmake
-      glslang
-      llvmPackages_22.clang-tools
-      llvmPackages_22.lld
-      ninja
-      pkg-config
-      protobuf
-      qt6.wrapQtAppsHook
     ];
 
     buildInputs = [
+      llvmPackages_22.libcxx
+    ];
+
+    installPhase = ''
+      runHook preInstall
+      cp -R . "$out"
+      runHook postInstall
+    '';
+  };
+
+  litoSrc = fetchFromGitHub {
+    owner = "litocpp";
+    repo = "lito";
+    tag = "v${litoVersion}";
+    hash = "sha256-6A39ta0iMgWyvuteMYD+z56r4+1wBKbUXwEh8o5Gqig=";
+  };
+
+  litoQt = stdenvNoCC.mkDerivation {
+    pname = "lito-qt";
+    version = "0.1.0";
+
+    src = "${litoSrc}/data/script-packages/qt";
+
+    postPatch = ''
+      substituteInPlace qt/moc.lua \
+        --replace-fail \
+        $'  for _, value in ipairs(environment.framework_include_directories or {}) do\n    append(result, value)\n  end\n  return result' \
+        $'  for _, value in ipairs(environment.framework_include_directories or {}) do\n    append(result, value)\n  end\n  append(result, "/nix/store")\n  return result'
+    '';
+
+    dontConfigure = true;
+    dontBuild = true;
+    dontFixup = true;
+
+    installPhase = ''
+      runHook preInstall
+      mkdir -p "$out"
+      cp -R . "$out"
+      runHook postInstall
+    '';
+  };
+
+  litoConfig = writeText "waywallen-lito-config.toml" ''
+    [builtin.packages]
+    qt = { path = "${litoQt}" }
+  '';
+
+  waywallenSrc = fetchFromGitHub {
+    owner = "waywallen";
+    repo = "waywallen";
+    tag = "v${version}";
+    fetchLFS = true;
+    hash = "sha256-mIO/9/U2nAiA0fEUEw2PBjFvo/j6AdzrC6TFx3hiou4=";
+  };
+
+  sourceBundle = stdenvNoCC.mkDerivation {
+    pname = "waywallen-source-bundle";
+    inherit version;
+
+    src = waywallenSrc;
+
+    nativeBuildInputs = [
+      lito
+      cacert
+      cargo
+      cmake
+      curl
+      git
+      gnutar
+      gzip
+      llvmPackages_22.clang
+      llvmPackages_22.lld
+    ];
+
+    dontConfigure = true;
+
+    buildPhase = ''
+      runHook preBuild
+      export HOME="$TMPDIR/home"
+      export XDG_DATA_HOME="$TMPDIR/lito"
+      mkdir -p "$HOME"
+      lito fetch --output bundle
+      find bundle -exec touch -h -d @1 {} +
+      tar \
+        --sort=name \
+        --mtime=@1 \
+        --owner=0 \
+        --group=0 \
+        --numeric-owner \
+        -cf - \
+        -C bundle \
+        . \
+        | gzip -n > "$out"
+      runHook postBuild
+    '';
+
+    installPhase = "true";
+
+    outputHashMode = "flat";
+    outputHashAlgo = "sha256";
+    outputHash = "sha256-sVHPAuBsa2ey7ovsMfa8x57V7vmsBDaSPkR1RQ89wP4=";
+  };
+
+  sourceBundleDir = stdenvNoCC.mkDerivation {
+    pname = "waywallen-source-bundle";
+    inherit version;
+
+    src = sourceBundle;
+
+    nativeBuildInputs = [
+      gnutar
+      gzip
+    ];
+
+    dontUnpack = true;
+    dontFixup = true;
+
+    installPhase = ''
+      runHook preInstall
+      mkdir -p "$out"
+      tar -xzf "$src" -C "$out"
+      ln -s "$out/v1/cargo/"*/vendor "$out/v1/cargo/vendor"
+      runHook postInstall
+    '';
+  };
+
+  wrapProtocConfig = stdenvNoCC.mkDerivation {
+    pname = "wrap-protoc-config";
+    version = qt6.qtgrpc.version;
+
+    dontUnpack = true;
+
+    installPhase = ''
+      runHook preInstall
+      mkdir -p "$out/lib/cmake/WrapProtoc"
+      cp \
+        ${qt6.qtgrpc}/lib/cmake/Qt6/FindWrapProtoc.cmake \
+        "$out/lib/cmake/WrapProtoc/WrapProtocConfig.cmake"
+      runHook postInstall
+    '';
+  };
+in
+llvmPackages_22.stdenv.mkDerivation {
+  pname = "waywallen";
+  inherit version;
+
+  src = waywallenSrc;
+
+  postPatch = ''
+    mkdir -p .lito
+    cp ${litoConfig} .lito/config.toml
+  '';
+
+  nativeBuildInputs = [
+    lito
+    cargo
+    cmake
+    glslang
+    gnutar
+    git
+    llvmPackages_22.clang-tools
+    llvmPackages_22.lld
+    llvmPackages_22.llvm
+    ninja
+    pkg-config
+    protobuf
+    qt6.qttools
+    qt6.wrapQtAppsHook
+    rustc
+    wrapProtocConfig
+  ];
+
+  buildInputs = [
+    ffmpeg
+    libgbm
+    libglvnd
+    libpulseaudio
+    libva
+    qt6.qtbase
+    qt6.qtdeclarative
+    qt6.qtgrpc
+    qt6.qtshadertools
+    qt6.qtwayland
+    qt6.qtwebsockets
+    vulkan-headers
+    vulkan-loader
+  ];
+
+  # Fortify wrappers become mangled C++ module symbols in rstd.
+  hardeningDisable = [
+    "fortify"
+    "fortify3"
+  ];
+
+  dontConfigure = true;
+
+  buildPhase = ''
+    runHook preBuild
+    export HOME="$TMPDIR/home"
+    export XDG_DATA_HOME="$TMPDIR/lito"
+    mkdir -p "$HOME"
+    git config --global --add safe.directory '*'
+    lito build \
+      --locked \
+      --offline \
+      --source-bundle ${sourceBundleDir} \
+      --profile release \
+      -j "$NIX_BUILD_CORES"
+    runHook postBuild
+  '';
+
+  installPhase = ''
+    runHook preInstall
+    lito install \
+      --locked \
+      --offline \
+      --source-bundle ${sourceBundleDir} \
+      --profile release \
+      --prefix "$out" \
+      --force
+    runHook postInstall
+  '';
+
+  qtWrapperArgs = [
+    "--prefix"
+    "LD_LIBRARY_PATH"
+    ":"
+    (lib.makeLibraryPath [
       ffmpeg
-      libgbm
-      libglvnd
       libpulseaudio
-      libva
-      qt6.qtbase
-      qt6.qtdeclarative
-      qt6.qtgrpc
-      qt6.qtshadertools
-      qt6.qtwayland
-      qt6.qtwebsockets
-      vulkan-headers
-      vulkan-loader
-    ];
+    ])
+  ];
 
-    qtWrapperArgs = [
-      "--prefix"
-      "LD_LIBRARY_PATH"
-      ":"
-      (lib.makeLibraryPath [
-        ffmpeg
-        libpulseaudio
-      ])
-    ];
-
-    doCheck = false;
-
-    meta = {
-      description = "Wallpaper manager for Linux";
-      homepage = "https://github.com/waywallen/waywallen";
-      license = licenses.mit;
-      mainProgram = "waywallen";
-      maintainers = with maintainers; [ brsvh ];
-      platforms = lib.platforms.linux;
-    };
-  })
+  meta = {
+    description = "Wallpaper manager for Linux";
+    homepage = "https://github.com/waywallen/waywallen";
+    license = licenses.mit;
+    mainProgram = "waywallen";
+    maintainers = with maintainers; [ brsvh ];
+    platforms = builtins.attrNames litoReleases;
+  };
+}
