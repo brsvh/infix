@@ -1,0 +1,251 @@
+@node Development Shells
+@chapter Generating Files for Development Shells
+@cindex development shells
+@vindex perSystem.devshells
+@vindex devShells.@var{system}.@var{name}
+
+  The @code{devshell} module extends upstream devshell with generated
+project files.  A shell's packages and settings use the usual devshell
+options.  File entries add store files, startup links, and optional
+hooks alongside those settings.
+
+  Declare shells under @code{perSystem.devshells}, with a lowercase
+@samp{s}.  It is an attribute set of submodules and defaults to @code{@{
+@}}.  Each entry produces a flake output under
+@code{devShells.@var{system}.@var{name}}, with a capital @samp{S}. The
+system is selected by the flake-parts @code{systems} list. @xref{Getting
+Started}, for the required inputs and imports.
+
+@menu
+* Defining a Shell::    Select packages and name the environment.
+* Generated Files::    Turn Nix data into project configuration.
+* Startup Actions::    Order links and run hooks.
+* File Options::       Reference for generated file entries.
+@end menu
+
+@node Defining a Shell
+@section Defining a Shell Environment
+
+  A named shell entry is an upstream devshell module extended with a
+@code{files} option.  Upstream options such as @code{commands},
+@code{env}, @code{devshell.packages}, and @code{devshell.startup} remain
+available. This module defines a shell containing Git and ripgrep:
+
+@example
+@{
+  perSystem =
+    @{
+      pkgs,
+      ...
+    @}:
+    @{
+      devshells = @{
+        default = @{
+          devshell = @{
+            name = "example";
+
+            packages = with pkgs; [
+              git
+              ripgrep
+            ];
+          @};
+        @};
+      @};
+    @};
+@}
+@end example
+
+@noindent
+For each configured platform, infix assigns
+@code{perSystem.devshells.default.devshell.shell} to
+@code{devShells.@var{system}.default}.  The same mapping applies to
+other entry names.  Generated files are optional; an ordinary devshell
+entry needs no @code{files} declarations.
+
+@node Generated Files
+@section Generating and Linking Project Files
+@cindex generated files
+@cindex store files
+@cindex symbolic links
+@vindex perSystem.devshells.@var{name}.files
+
+  The @code{files} attribute set maps entry names to generated files. It
+defaults to @code{@{ @}}.  Each entry needs @code{data}, a
+@code{generator}, and a destination @code{path}.  The generator receives
+the data and returns a store file.  Entering the shell links that file
+under the project root, as identified by @env{PRJ_ROOT}.
+
+  The following module creates a JSON configuration.  Its entry name,
+@samp{settings}, identifies the startup action; @code{path} selects the
+actual destination file.
+
+@example
+@{
+  perSystem =
+    @{
+      pkgs,
+      ...
+    @}:
+    let
+      json = pkgs.formats.json @{ @};
+    in
+    @{
+      devshells = @{
+        default = @{
+          files = @{
+            settings = @{
+              data = @{
+                formatter = "treefmt";
+
+                language = "nix";
+              @};
+
+              generator = json.generate "settings.json";
+
+              path = ".config/example/settings.json";
+            @};
+          @};
+        @};
+      @};
+    @};
+@}
+@end example
+
+@noindent
+The name supplied to @code{json.generate} names the generated store
+file.  It does not determine the link's destination.  Binding the name
+leaves a function of one argument, the entry's @code{data}.
+
+  Shell startup creates the destination's parent directories and runs
+@command{ln} with @option{-sfnT} on the exact destination path.  This
+can replace an existing file or symbolic link.  A directory at that path
+is not treated as a destination directory for the link.  The generated
+contents live in the Nix store; edit the Nix data to change them.
+
+  Linking happens when the shell starts.  Producing the shell derivation
+alone does not create files in the working directory.  Removing a file
+entry does not remove a link left by an earlier shell session.
+
+@node Startup Actions
+@section Ordering Links and Running Hooks
+@cindex startup ordering
+@cindex file hooks
+
+  Each file entry creates an upstream devshell startup entry with the
+same name.  The @code{deps} list names startup entries that must run
+first.  Dependencies may name other generated files or other upstream
+startup entries; their names are not destination paths.
+
+  A file's @code{hook} runs after its link has been created.  Use it for
+an action that needs the generated file.  Packages listed in the file
+entry's @code{packages} are added to @code{devshell.packages}, so tools
+needed by hooks are available in the shell.
+
+  This module links a routing file, validates it with @command{jq}, and
+then links a second file whose startup entry depends on the first:
+
+@example
+@{
+  perSystem =
+    @{
+      pkgs,
+      ...
+    @}:
+    let
+      json = pkgs.formats.json @{ @};
+    in
+    @{
+      devshells = @{
+        default = @{
+          files = @{
+            routing = @{
+              data = @{
+                target = "local";
+              @};
+
+              generator = json.generate "routing.json";
+
+              hook = ''
+                jq -e '.target == "local"' \
+                  "$PRJ_ROOT/.config/example/routing.json" >/dev/null
+              '';
+
+              packages = with pkgs; [
+                jq
+              ];
+
+              path = ".config/example/routing.json";
+            @};
+
+            settings = @{
+              data = @{
+                routing = "routing.json";
+              @};
+
+              deps = [
+                "routing"
+              ];
+
+              generator = json.generate "settings.json";
+
+              path = ".config/example/settings.json";
+            @};
+          @};
+        @};
+      @};
+    @};
+@}
+@end example
+
+@noindent
+The @samp{settings} startup action depends on the entire @samp{routing}
+action, including its hook.  Use distinct entry names for independent
+startup actions.  Dependency resolution and startup error handling
+follow the upstream devshell behavior.
+
+@node File Options
+@section Generated File Options
+
+  The following fields belong to
+@code{perSystem.devshells.@var{shell}.files.@var{file}}.  The file entry
+name selects its startup entry; it does not supply defaults for the
+fields below.
+
+@table @code
+@vindex perSystem.devshells.@var{shell}.files.@var{file}.data
+@item data
+Required value of any Nix type.  It is passed unchanged to
+@code{generator}, which determines the useful input types.  There is no
+default.
+
+@vindex perSystem.devshells.@var{shell}.files.@var{file}.generator
+@item generator
+Required function taking @code{data} and returning a store file suitable
+as a symbolic-link target.  There is no default.  Format generators from
+@code{pkgs.formats} commonly take a file name before the data; bind that
+name as shown in @ref{Generated Files}.
+
+@vindex perSystem.devshells.@var{shell}.files.@var{file}.path
+@item path
+Required nonempty string that does not start with @samp{/}.  The path is
+appended to @env{PRJ_ROOT}.  There is no default.  Use a path within
+your project; the option's type does not reject @samp{..} components.
+
+@vindex perSystem.devshells.@var{shell}.files.@var{file}.deps
+@item deps
+List of startup entry names; defaults to @code{[ ]}.  These actions must
+precede the file's startup action.  @xref{Startup Actions}.
+
+@vindex perSystem.devshells.@var{shell}.files.@var{file}.hook
+@item hook
+Shell text appended after the linking commands; defaults to @code{""}.
+It uses the module system's lines type.
+
+@vindex perSystem.devshells.@var{shell}.files.@var{file}.packages
+@item packages
+List of packages added to the shell; defaults to @code{[ ]}.  Packages
+from all file entries are combined with the shell's package definitions.
+@end table
+
+  The generated @code{file} value is internal.  Configure @code{data}
+and @code{generator} instead of supplying that value directly.

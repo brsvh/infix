@@ -110,6 +110,7 @@
       }
       {
         imports = [
+          ./doc/flake-module.nix
           ./src
         ];
 
@@ -135,6 +136,8 @@
           ];
         };
 
-        systems = [ ];
+        systems = [
+          "x86_64-linux"
+        ];
       };
 }

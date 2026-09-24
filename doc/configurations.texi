@@ -1,0 +1,444 @@
+@node Configurations
+@chapter Declaring Homes and Systems
+@cindex configurations
+@vindex configurations
+@vindex configurations.home
+@vindex configurations.system
+
+  The @code{configurations} module describes standalone Home Manager
+configurations and NixOS systems in one option tree.  A @dfn{standalone
+home} has its own package set and Home Manager evaluation.  A system can
+also include Home Manager settings for its users.
+
+  Declare standalone homes under @code{configurations.home} and systems
+under @code{configurations.system}.  Both default to empty submodules.
+Every entry except @code{global} produces a named flake output. The
+reserved @code{global} entry supplies settings shared by that kind of
+configuration; it does not produce an output of its own.
+
+@menu
+* Standalone Homes::    Configure a home with its own package set.
+* NixOS Systems::       Declare a system and its main module.
+* Shared Settings::     Combine modules, packages, and arguments.
+* System Users::        Include Home Manager in a NixOS system.
+@end menu
+
+@node Standalone Homes
+@section Configuring a Standalone Home
+@cindex standalone homes
+@vindex configurations.home.@var{name}
+@vindex configurations.home.@var{name}.home
+@vindex homeConfigurations.@var{name}
+
+  A standalone home entry requires a @code{home} module.  The entry name
+selects the output name, not the operating-system user name.  Set
+@code{home.username} and @code{home.homeDirectory} in the Home Manager
+module itself.  For example:
+
+@example
+@{
+  configurations = @{
+    home = @{
+      alice = @{
+        nixpkgs = @{
+          system = "x86_64-linux";
+        @};
+
+        home = @{ ... @}: @{
+          home = @{
+            homeDirectory = "/home/alice";
+
+            stateVersion = "25.05";
+
+            username = "alice";
+          @};
+
+          programs = @{
+            home-manager = @{
+              enable = true;
+            @};
+          @};
+        @};
+      @};
+    @};
+  @};
+@}
+@end example
+
+@noindent
+This declaration produces @code{homeConfigurations.alice}.  The
+@code{stateVersion} is an example Home Manager compatibility setting;
+choose it according to the history of the home you are configuring. You
+can replace the inline @code{home} module with a path to a module.
+
+  Each entry under @code{configurations.home.@var{name}} has the
+following fields.  A module can be a path, an attribute set, or a module
+function. A @dfn{profile} is another explicitly supplied module; infix
+does not assign it a special evaluation mechanism.
+
+@table @code
+@item home
+Required main Home Manager module.  There is no default.
+
+@vindex configurations.home.@var{name}.modules
+@item modules
+List of additional Home Manager modules; defaults to @code{[ ]}.
+
+@vindex configurations.home.@var{name}.profiles
+@item profiles
+List of Home Manager profile modules; defaults to @code{[ ]}.
+
+@vindex configurations.home.@var{name}.nixpkgs
+@item nixpkgs
+Package-set settings; defaults to an empty submodule.  Input and
+platform selection, configuration, and overlays are described in
+@ref{Shared Settings}.
+
+@vindex configurations.home.@var{name}.specialArgs
+@item specialArgs
+Attribute set of arguments passed to Home Manager as
+@code{extraSpecialArgs}; defaults to the flake @code{inputs}. See
+@ref{Shared Settings}, for the merge with global arguments.
+@end table
+
+  Home Manager receives the global home @code{modules}, the entry's
+@code{modules}, its @code{profiles}, and finally its @code{home} module,
+in that order.  This is the composition order; option conflicts still
+follow the module system's merging and priority rules.
+
+@node NixOS Systems
+@section Configuring a NixOS System
+@cindex NixOS systems
+@vindex configurations.system.@var{name}
+@vindex configurations.system.@var{name}.system
+@vindex nixosConfigurations.@var{name}
+
+  A system entry requires a main NixOS module in @code{system}.  Its
+name selects the @code{nixosConfigurations} output and supplies an
+overridable default for @code{networking.hostName}.  For example, this
+module declares @code{nixosConfigurations.workstation}:
+
+@example
+@{
+  configurations = @{
+    system = @{
+      workstation = @{
+        system = ./hosts/workstation/system.nix;
+      @};
+    @};
+  @};
+@}
+@end example
+
+@noindent
+The example assumes that @file{./hosts/workstation/system.nix} contains
+your NixOS configuration, including its hardware settings and
+@code{nixpkgs.hostPlatform}.  Infix does not supply boot, filesystem, or
+hardware settings.  Set @code{networking.hostName} there if the host
+name should differ from @samp{workstation}.
+
+  Each entry under @code{configurations.system.@var{name}} accepts these
+fields:
+
+@table @code
+@item system
+Required main NixOS module.  There is no default.
+
+@vindex configurations.system.@var{name}.modules
+@item modules
+List of additional NixOS modules; defaults to @code{[ ]}.
+
+@vindex configurations.system.@var{name}.profiles
+@item profiles
+List of NixOS profile modules; defaults to @code{[ ]}.
+
+@vindex configurations.system.@var{name}.nixpkgs
+@item nixpkgs
+Package-set settings; defaults to an empty submodule. @xref{Shared
+Settings}.
+
+@vindex configurations.system.@var{name}.specialArgs
+@item specialArgs
+Attribute set passed to NixOS as @code{specialArgs} and to its embedded
+Home Manager evaluation as @code{extraSpecialArgs}.  It defaults to the
+flake @code{inputs}.  Global arguments are combined as described in
+@ref{Shared Settings}.
+
+@vindex configurations.system.@var{name}.users
+@item users
+Attribute set of user declarations; defaults to @code{@{ @}}.
+@xref{System Users}.
+@end table
+
+  The NixOS module list starts with the default host name, the upstream
+Home Manager NixOS module, the Home Manager integration settings, and
+the merged Nixpkgs settings.  It continues with global system
+@code{modules}, local @code{modules}, the main @code{system} module,
+local @code{profiles}, and the generated user modules.  Unlike
+standalone homes, systems place the main module before their profiles.
+
+  Embedded Home Manager uses @code{useGlobalPkgs = true} and
+@code{useUserPackages = true}.  Its users share the NixOS package set,
+and Home Manager installs their packages through NixOS user packages.
+The module uses the standard @code{nixosConfigurations} and
+@code{homeConfigurations} outputs; its intermediate
+@code{finalNixOSConfigurations} and @code{finalHomeConfigurations}
+options are internal.
+
+@node Shared Settings
+@section Sharing Modules and Package Settings
+@cindex global settings
+@cindex overlays, configuration package sets
+@cindex special arguments
+@vindex configurations.home.global
+@vindex configurations.system.global
+
+  The @code{global} entries let related homes or systems share modules,
+Nixpkgs settings, and extra arguments.  Home globals apply to standalone
+homes, and system globals apply to NixOS systems.  They are separate
+submodules, each defaulting to @code{@{ @}}.
+
+  For example, declare a common home module and an additional profile
+for one home.  The paths here stand for modules supplied by your
+project:
+
+@example
+@{
+  configurations = @{
+    home = @{
+      global = @{
+        modules = [
+          ./home/common.nix
+        ];
+
+        nixpkgs = @{
+          config = @{
+            allowUnfree = true;
+          @};
+
+          system = "x86_64-linux";
+        @};
+      @};
+
+      alice = @{
+        home = ./home/alice.nix;
+
+        profiles = [
+          ./home/work.nix
+        ];
+      @};
+    @};
+  @};
+@}
+@end example
+
+@noindent
+The @samp{alice} home inherits the global platform and package policy.
+Other homes can supply their own @code{nixpkgs} settings.
+
+@vindex configurations.home.global.modules
+@vindex configurations.system.global.modules
+@vindex configurations.home.global.nixpkgs
+@vindex configurations.system.global.nixpkgs
+@vindex configurations.home.global.specialArgs
+@vindex configurations.system.global.specialArgs
+  Each global entry has @code{modules}, a list defaulting to @code{[ ]};
+@code{nixpkgs}, a submodule defaulting to @code{@{ @}}; and
+@code{specialArgs}, an attribute set defaulting to the flake
+@code{inputs}. Global entries have no @code{profiles}, main @code{home}
+or @code{system} module, or @code{users} field.
+
+  The @code{nixpkgs} submodule has these settings, both globally and in
+individual entries:
+
+@table @code
+@vindex configurations.home.global.nixpkgs.input
+@vindex configurations.home.@var{name}.nixpkgs.input
+@vindex configurations.system.global.nixpkgs.input
+@vindex configurations.system.@var{name}.nixpkgs.input
+@item input
+Nixpkgs source, accepted as a raw value.  Globally it defaults to
+@code{inputs.nixpkgs}; an individual entry defaults to the corresponding
+global input.  Standalone homes import this source directly.  Systems
+use its @code{lib.nixosSystem} function.
+
+@vindex configurations.home.global.nixpkgs.system
+@vindex configurations.home.@var{name}.nixpkgs.system
+@item system
+Platform string for standalone homes.  The global default is
+@code{"x86_64-linux"}; an individual home defaults to the global value.
+This field is not a system-configuration option.  Set
+@code{nixpkgs.hostPlatform} in the NixOS module instead.
+
+@vindex configurations.home.global.nixpkgs.config
+@vindex configurations.home.@var{name}.nixpkgs.config
+@vindex configurations.system.global.nixpkgs.config
+@vindex configurations.system.@var{name}.nixpkgs.config
+@item config
+Attribute set of Nixpkgs configuration values, each accepted as a raw
+value; defaults to @code{@{ @}} at both levels.  Infix combines global
+and local sets with @code{//}.  A local key replaces the same global key
+as a whole; this operation does not recursively merge nested sets.
+
+@vindex configurations.home.global.nixpkgs.overlays
+@vindex configurations.home.@var{name}.nixpkgs.overlays
+@vindex configurations.system.global.nixpkgs.overlays
+@vindex configurations.system.@var{name}.nixpkgs.overlays
+@item overlays
+List of raw overlay values; defaults to @code{[ ]} at both levels. Local
+overlays follow the global overlays in the combined list.
+@end table
+
+  Special arguments use the same right-biased operation:
+@code{global.specialArgs // local.specialArgs}.  This supplies
+@code{extraSpecialArgs} for a standalone home and @code{specialArgs} for
+a system.  Each local set defaults to @code{inputs}, so a same-named
+input in that set can replace a global argument.  Declare the desired
+local arguments explicitly when those names overlap.
+
+@node System Users
+@section Including Home Manager Users in a System
+@cindex system users
+@cindex reusing home configurations
+
+  A declaration at
+@code{configurations.system.@var{host}.users.@var{user}} combines a
+NixOS user module with Home Manager settings.  Both @code{user} and
+@code{home} are required.  The entry name selects
+@code{home-manager.users.@var{user}}; your NixOS module must declare the
+matching operating-system user.
+
+@menu
+* Direct Home Modules:: Supply Home Manager settings for one user.
+* Reusing Homes::       Share a standalone home's module list.
+* User Options::        Reference for each user declaration.
+@end menu
+
+@node Direct Home Modules
+@subsection Supplying a User's Home Module
+
+  To include a Home Manager module directly, assign it to the user's
+@code{home} field.  For example, add this declaration to a system that
+already has a main @code{system} module:
+
+@example
+@{
+  configurations = @{
+    system = @{
+      workstation = @{
+        users = @{
+          alice = @{
+            home = ./home/alice.nix;
+
+            modules = [
+              ./home/common.nix
+            ];
+
+            profiles = [
+              ./home/work.nix
+            ];
+
+            user = @{ ... @}: @{
+              users = @{
+                users = @{
+                  alice = @{
+                    extraGroups = [
+                      "wheel"
+                    ];
+
+                    isNormalUser = true;
+                  @};
+                @};
+              @};
+            @};
+          @};
+        @};
+      @};
+    @};
+  @};
+@}
+@end example
+
+@noindent
+The Home Manager user imports this entry's @code{modules}, then its
+@code{profiles}, and finally @code{home}.  Global standalone-home
+modules are not included by this form.
+
+@node Reusing Homes
+@subsection Reusing a Standalone Home's Modules
+
+  To reuse an existing standalone home, set the system user's
+@code{home} to its evaluated declaration through the flake module's
+@code{config} argument.  The following example assumes that the home
+@samp{alice}, the system @samp{workstation}, and its NixOS user module
+are declared elsewhere in the same configuration:
+
+@example
+@{
+  config,
+  ...
+@}:
+@{
+  configurations = @{
+    system = @{
+      workstation = @{
+        users = @{
+          alice = @{
+            home = config.configurations.home.alice;
+          @};
+        @};
+      @};
+    @};
+  @};
+@}
+@end example
+
+@noindent
+This form imports the global home modules, the referenced home's
+@code{modules}, its @code{profiles}, and its main @code{home} module.
+The system user entry's own @code{modules} and @code{profiles} are
+ignored. Pass the configuration value itself, rather than an output from
+@code{homeConfigurations}.
+
+  Reuse transfers only the Home Manager module list.  It does not
+transfer the standalone home's @code{nixpkgs} or @code{specialArgs}.
+The embedded home uses the NixOS package set and the system's merged
+special arguments, as described in @ref{NixOS Systems} and @ref{Shared
+Settings}.
+
+@node User Options
+@subsection User Declaration Options
+
+  The fields below belong to
+@code{configurations.system.@var{host}.users.@var{user}}.  They
+configure a single embedded Home Manager user, not a standalone home.
+
+@table @code
+@vindex configurations.system.@var{host}.users.@var{user}.user
+@item user
+Required NixOS module declaring the operating-system user.  It can be a
+module path, attribute set, or function.  There is no default.
+
+@vindex configurations.system.@var{host}.users.@var{user}.home
+@item home
+Required raw value: either a Home Manager module or an evaluated
+@code{configurations.home.@var{name}} entry.  There is no default.
+@xref{Direct Home Modules}, and @ref{Reusing Homes}, for the two forms.
+
+@vindex configurations.system.@var{host}.users.@var{user}.modules
+@item modules
+List of Home Manager modules; defaults to @code{[ ]}.  Used only with a
+direct home module.
+
+@vindex configurations.system.@var{host}.users.@var{user}.profiles
+@item profiles
+List of Home Manager profile modules; defaults to @code{[ ]}.  Used only
+with a direct home module.
+
+@vindex configurations.system.@var{host}.users.@var{user}.specialArgs
+@item specialArgs
+Attribute set defaulting to @code{inputs}.  This field is declared but
+is not passed to Home Manager by the current implementation.  Put
+arguments needed by embedded users in the system's @code{specialArgs}
+instead.
+@end table

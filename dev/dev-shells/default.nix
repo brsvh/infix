@@ -130,6 +130,12 @@ let
           max_line_length = 80;
           tab_width = 2;
         };
+
+        "*.texi" = {
+          indent_size = 2;
+          indent_style = "space";
+          max_line_length = 72;
+        };
       };
 
       engine =

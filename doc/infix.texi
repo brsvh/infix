@@ -1,0 +1,189 @@
+\input texinfo
+@setfilename infix.info
+@settitle Infix Manual
+@documentlanguage en
+@documentencoding UTF-8
+@set VERSION development
+
+@copying
+This manual describes the @value{VERSION} version of infix.
+
+Copyright @copyright{} 2024--2026 Bingshan Chang.
+
+@quotation
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3 or
+any later version published by the Free Software Foundation; with no
+Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.  A
+copy of the license is included in the section entitled ``GNU Free
+Documentation License''.
+@end quotation
+@end copying
+
+@dircategory Software development
+@direntry
+* Infix: (infix).        Reusable Nix flake modules and configuration.
+@end direntry
+
+@titlepage
+@title Infix Manual
+@subtitle Development version
+@author Bingshan Chang
+@page
+@insertcopying
+@end titlepage
+
+@contents
+
+@ifnottex
+@node Top
+@top Infix
+
+@insertcopying
+
+  Infix supplies reusable Nix libraries, overlays, and flake modules.
+This manual explains how to declare NixOS and Home Manager
+configurations and generate project files for development shells.  It
+assumes that you can write Nix expressions and use flake-parts modules.
+@end ifnottex
+
+@menu
+* Getting Started::     Connect the modules to your flake.
+* Configurations::      Declare homes, systems, and system users.
+* Development Shells::  Generate files when entering a shell.
+* Copying::             The GNU Free Documentation License.
+* Concept Index::       Find a task or concept.
+* Option Index::        Find an option or flake output.
+@end menu
+
+@node Getting Started
+@chapter Connecting Infix to a Flake
+@cindex flake inputs
+@cindex flake-parts
+@vindex flakeModules.configurations
+@vindex flakeModules.devshell
+
+  A @dfn{flake module} extends the options available to a flake-parts
+configuration.  Importing an infix module makes its options available;
+you then declare the homes, systems, or shells you need.  These modules
+are separate from Nixpkgs overlays.  You do not need an infix overlay to
+use them.
+
+  The following @file{flake.nix} connects both modules and their inputs.
+It leaves the configuration declarations to the examples in the
+following chapters.  Keep only the imports and inputs needed by your
+project.
+
+@example
+@{
+  inputs = @{
+    devshell = @{
+      inputs = @{
+        nixpkgs = @{
+          follows = "nixpkgs";
+        @};
+      @};
+
+      url = "github:numtide/devshell";
+    @};
+
+    flake-parts = @{
+      inputs = @{
+        nixpkgs-lib = @{
+          follows = "nixpkgs";
+        @};
+      @};
+
+      url = "github:hercules-ci/flake-parts";
+    @};
+
+    home-manager = @{
+      inputs = @{
+        nixpkgs = @{
+          follows = "nixpkgs";
+        @};
+      @};
+
+      url = "github:nix-community/home-manager";
+    @};
+
+    infix = @{
+      inputs = @{
+        nixpkgs = @{
+          follows = "nixpkgs";
+        @};
+      @};
+
+      url = "git+https://codeberg.org/bingshan/infix.git";
+    @};
+
+    nixpkgs = @{
+      url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    @};
+  @};
+
+  outputs =
+    inputs@@@{
+      flake-parts,
+      infix,
+      ...
+    @}:
+    flake-parts.lib.mkFlake
+      @{
+        inherit
+          inputs
+          ;
+      @}
+      @{
+        imports = [
+          infix.flakeModules.configurations
+          infix.flakeModules.devshell
+        ];
+
+        systems = [
+          "x86_64-linux"
+        ];
+      @};
+@}
+@end example
+
+@noindent
+The @code{follows} declarations share the chosen Nixpkgs input.  Choose
+compatible revisions of Nixpkgs, Home Manager, and devshell for your
+project; the example uses their development branches.
+
+  @code{flakeModules.configurations} uses the inputs named
+@code{nixpkgs} and @code{home-manager}.  It produces named configuration
+outputs independently of the flake-parts @code{systems} list.
+@code{flakeModules.devshell} uses the input named @code{devshell} and
+the per-system @code{pkgs} argument.  List the platforms for which you
+want shell outputs in @code{systems}.
+
+  To use a later example, place its module in a file and add that path
+to @code{imports}, alongside the infix modules.  Paths such as
+@file{./home/alice.nix} in the examples refer to files in your project;
+replace them with your own modules.  Infix does not discover modules or
+profiles by scanning project directories.
+
+  Home Manager and devshell retain their upstream options.  Consult the
+@url{https://nix-community.github.io/home-manager/, Home Manager manual}
+and the @url{https://numtide.github.io/devshell/, devshell
+documentation} for the settings of those applications.  The following
+chapters describe infix's declarations and how it combines them.
+
+@include configurations.texi
+@include devshell.texi
+
+@node Copying
+@appendix GNU Free Documentation License
+@include fdl.texi
+
+@node Concept Index
+@unnumbered Concept Index
+@printindex cp
+
+@node Option Index
+@unnumbered Option Index
+@printindex vr
+
+@bye
