@@ -20,6 +20,7 @@
   ninja,
   pkg-config,
   protobuf,
+  python3,
   qt6,
   rustc,
   stdenvNoCC,
@@ -137,6 +138,7 @@ let
       gzip
       llvmPackages_22.clang
       llvmPackages_22.lld
+      python3
     ];
 
     dontConfigure = true;
@@ -146,7 +148,38 @@ let
       export HOME="$TMPDIR/home"
       export XDG_DATA_HOME="$TMPDIR/lito"
       mkdir -p "$HOME"
+      # Lito needs an unlocked fetch to populate the offline registry cache.
+      cp lito.lock "$TMPDIR/lito.lock"
       lito fetch --output bundle
+      cmp lito.lock "$TMPDIR/lito.lock"
+      # Drop mutable checkout metadata and registry releases outside the lockfile.
+      rm -rf bundle/v1/git/*/.git/index bundle/v1/git/*/.git/logs
+      python3 - <<'PYTHON'
+      import json
+      from pathlib import Path
+      import tomllib
+
+      with open("lito.lock", "rb") as lock_file:
+          packages = tomllib.load(lock_file)["packages"]
+      locked = {
+          (package["source"].removeprefix("registry+"), package["name"]): package
+          for package in packages
+          if package.get("source", "").startswith("registry+")
+      }
+      for path in Path("bundle/v1/registry/index").glob("*/*.json"):
+          cache = json.loads(path.read_text())
+          package = locked[(cache["registry"], cache["package"])]
+          body = json.loads(cache["body"])
+          body["releases"] = [
+              release for release in body["releases"]
+              if release["version"] == package["version"]
+          ]
+          assert len(body["releases"]) == 1, path
+          assert body["releases"][0]["checksum"] == package["checksum"], path
+          cache["body"] = json.dumps(body, sort_keys=True, separators=(",", ":"))
+          cache["etag"] = None
+          path.write_text(json.dumps(cache, sort_keys=True, separators=(",", ":")) + "\n")
+      PYTHON
       find bundle -exec touch -h -d @1 {} +
       tar \
         --sort=name \
@@ -165,7 +198,7 @@ let
 
     outputHashMode = "flat";
     outputHashAlgo = "sha256";
-    outputHash = "sha256-sVHPAuBsa2ey7ovsMfa8x57V7vmsBDaSPkR1RQ89wP4=";
+    outputHash = "sha256-Oo6n54LfSznuLsZbdKj0oNDiXqeVdeyujNs4WAOX9L8=";
   };
 
   sourceBundleDir = stdenvNoCC.mkDerivation {
@@ -218,7 +251,9 @@ llvmPackages_22.stdenv.mkDerivation {
     cp ${litoConfig} .lito/config.toml
   '';
 
+  # Lito's C++ binaries lack the Nix runtime library search paths.
   nativeBuildInputs = [
+    autoPatchelfHook
     lito
     cargo
     cmake
