@@ -16,14 +16,6 @@ final: prev: {
         p.override {
           manualPackages =
             p.manualPackages
-            // {
-              ghostel =
-                f.callPackage
-                  ../emacs-packages/overrides/ghostel/package.nix
-                  {
-                    inherit (p) ghostel;
-                  };
-            }
             // prev.lib.packagesFromDirectoryRecursive {
               inherit (f)
                 callPackage

@@ -1,13 +1,23 @@
 {
+  emacs,
+  fetchFromGitHub,
   fetchurl,
-  ghostel,
   lib,
+  melpaBuild,
+  nix-update-script,
   runCommandLocal,
+  stdenv,
+  xcbuild,
+  zig_0_16,
+  ...
 }:
 let
   inherit (lib)
     concatMapStringsSep
     escapeShellArg
+    licenses
+    maintainers
+    optionals
     ;
 
   # Keep these archives in sync with ghostel's Zig dependency graph.
@@ -208,28 +218,114 @@ let
       zigHash = "zigimg-0.1.0-8_eo2oyaFwBZwJpmqPkCfVXWBrHcqbYwmrp1I6bTD3lI";
     }
   ];
+
+  libExt =
+    stdenv.hostPlatform.extensions.sharedLibrary;
+
+  mkModule =
+    {
+      pname,
+      src,
+      version,
+      zig,
+      zigDeps,
+    }:
+    stdenv.mkDerivation (finalAttrs: {
+      inherit
+        pname
+        src
+        version
+        zig
+        zigDeps
+        ;
+
+      __structuredAttrs = true;
+      doCheck = true;
+      dontSetZigDefaultFlags = true;
+
+      env = {
+        EMACS_INCLUDE_DIR = "${emacs}/include";
+      };
+
+      nativeBuildInputs = [
+        finalAttrs.zig
+      ]
+      ++ optionals stdenv.hostPlatform.isDarwin [
+        xcbuild
+      ];
+
+      # Zig 0.16 reads dependencies from the project-local cache.
+      postConfigure = ''
+        cp -rLT ${finalAttrs.zigDeps} zig-pkg
+        chmod -R u+w zig-pkg
+      '';
+
+      strictDeps = true;
+      zigBuildFlags = finalAttrs.zigCheckFlags;
+
+      zigCheckFlags = [
+        "-Dcpu=baseline"
+        "-Doptimize=ReleaseFast"
+      ];
+    });
 in
-ghostel.overrideAttrs (prevAttrs: {
-  passthru = prevAttrs.passthru // {
-    module =
-      prevAttrs.passthru.module.overrideAttrs
-        (moduleAttrs: {
-          # Zig 0.16 reads dependencies from the project-local cache.
-          postConfigure = ''
-            cp -rLT ${moduleAttrs.zigDeps} zig-pkg
-            chmod -R u+w zig-pkg
-          '';
-        });
+melpaBuild (finalAttrs: {
+  files = ''
+    (:defaults "etc" "ghostel-module${libExt}" "ghostel-module.version")
+  '';
+
+  meta = {
+    description = "Terminal emulator powered by libghostty";
+    homepage = "https://github.com/dakra/ghostel";
+    license = licenses.gpl3Plus;
+
+    maintainers = with maintainers; [
+      rohan-datar
+      vonfry
+    ];
   };
+
+  passthru = {
+    module = mkModule {
+      inherit (finalAttrs)
+        src
+        version
+        zig
+        zigDeps
+        ;
+
+      pname = "${finalAttrs.pname}-module";
+    };
+
+    updateScript = nix-update-script { };
+  };
+
+  pname = "ghostel";
+
+  preBuild = ''
+    install ${finalAttrs.finalPackage.module}/ghostel-module${libExt} ghostel-module${libExt}
+    install --mode=444 ${finalAttrs.finalPackage.module}/ghostel-module.version ghostel-module.version
+  '';
+
+  src = fetchFromGitHub {
+    owner = "dakra";
+    repo = "ghostel";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-NpfnlggAcThNw9uY7Uq4qFPEJ+md8aZ8i32CQSUKz+w=";
+  };
+
+  version = "0.56.0";
+  zig = zig_0_16;
 
   # Fetch with Nix, then verify Zig content hashes without network access.
   zigDeps =
-    runCommandLocal prevAttrs.zigDeps.name
+    runCommandLocal
+      "${finalAttrs.pname}-${finalAttrs.version}-zig-deps"
       {
-        inherit (prevAttrs) src;
+        inherit (finalAttrs) src;
 
         nativeBuildInputs = [
-          prevAttrs.zig
+          finalAttrs.zig
         ];
       }
       ''
