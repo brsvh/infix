@@ -26,11 +26,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1776249299,
-        "narHash": "sha256-Dt9t1TGRmJFc0xVYhttNBD6QsAgHOHCArqGa0AyjrJY=",
+        "lastModified": 1788342924,
+        "narHash": "sha256-Sfyygt2dL88+160d014gaXMlWTGIL2HGxlIzLGsGPvE=",
         "ref": "main",
-        "rev": "56131e8628f173d24a27f6d27c0215eff57e40dd",
-        "revCount": 158,
+        "rev": "8be75245e274a789b87cc4df542abbcd8c5e7f93",
+        "revCount": 159,
         "type": "git",
         "url": "https://github.com/numtide/blueprint.git"
       },
@@ -56,11 +56,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1778446047,
-        "narHash": "sha256-oQvcadh2BCkrog+SGrG6YffKJrveYpjj3TdQJWaKhaM=",
+        "lastModified": 1784665499,
+        "narHash": "sha256-9BMxlTxCCDAeoNLtb1a/st7udtTIJep+wpUzquA29VU=",
         "ref": "master",
-        "rev": "f2bc12af1a6369648aac41041ceeaa0b866599c6",
-        "revCount": 503,
+        "rev": "0f2a1f0b6f42cebe3b149bf62d38754c5e0e9729",
+        "revCount": 519,
         "type": "git",
         "url": "https://github.com/nix-community/bun2nix.git"
       },
@@ -77,11 +77,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1778716662,
-        "narHash": "sha256-m1Yf0wZ8j1OHjTc2UwHwyQRSnNeSgLJOd7q5Y45hzi4=",
+        "lastModified": 1788450739,
+        "narHash": "sha256-glZLQlzIn1fXH6PazR2iUmTo7kzzyYSshrWhLS9TqCU=",
         "ref": "main",
-        "rev": "f7c1a2d347e4c52d5fb8d10cb4d94b5884e546fb",
-        "revCount": 475,
+        "rev": "31729ca8cbdb4fa927b34e5f4353e6a83f39e993",
+        "revCount": 494,
         "type": "git",
         "url": "https://github.com/hercules-ci/flake-parts.git"
       },
@@ -98,11 +98,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1781129616,
-        "narHash": "sha256-Hl0Pz/QIKpePSU7SdK3BMe5VNmUhFvfWyg57GyawxzE=",
+        "lastModified": 1790275434,
+        "narHash": "sha256-9dZF1EviQA/XKCjHChddQh7skrfKnZPSqPOqEeOKW0k=",
         "ref": "master",
-        "rev": "7dbd305f8b81050f223f00bcfbc8a6b74e048806",
-        "revCount": 6881,
+        "rev": "f2981148865f7390d187a91d4b1a3a7616047d6d",
+        "revCount": 7335,
         "type": "git",
         "url": "https://github.com/nix-community/home-manager.git"
       },
@@ -114,9 +114,6 @@
     },
     "llm-agents": {
       "inputs": {
-        "blueprint": [
-          "blueprint"
-        ],
         "bun2nix": [
           "bun"
         ],
@@ -134,11 +131,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1781157766,
-        "narHash": "sha256-InNpK3w0V6odvKtC5wCXZZiluiWAD6uLElz3to+sQA0=",
+        "lastModified": 1790287024,
+        "narHash": "sha256-bgcdRGgnICTPC9BakyP+pFYhsFeU4KJKkAlH5e7fJ3g=",
         "ref": "main",
-        "rev": "0b3a6a2dc43576f223d036ba70a29a2f0de99061",
-        "revCount": 10784,
+        "rev": "e365463a16ebd12b464e311622e829e53d0c93eb",
+        "revCount": 19220,
         "type": "git",
         "url": "https://github.com/numtide/llm-agents.nix"
       },
@@ -161,11 +158,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1779338171,
-        "narHash": "sha256-affUbv/bwE8SLGhuWKniDr7SVO+Lo1XEPjCZdyU5kgQ=",
+        "lastModified": 1784925540,
+        "narHash": "sha256-11IOL5tyJbB3vMQzzhIULuPtoHJpkLFz4BaKApm6t0Q=",
         "ref": "main",
-        "rev": "6ab1f232562a01d18b40d5ed6a58718c4f3a74bc",
-        "revCount": 660,
+        "rev": "b3d16367c54621fd073aa8c1dd510042f771f624",
+        "revCount": 685,
         "type": "git",
         "url": "https://github.com/nix-community/nix-unit.git"
       },
@@ -177,11 +174,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1780930886,
-        "narHash": "sha256-rppURzHviaQN131F+nLiLdGfcb0uCd9gGP0E5+iw9MI=",
+        "lastModified": 1790238896,
+        "narHash": "sha256-ym4BG18Pu2awiJIehla1Lo9xiB2QYRcCzW3SB74gEBY=",
         "ref": "nixpkgs-unstable",
-        "rev": "8c3cede7ddc26bd659d2d383b5610efbd2c7a16e",
-        "revCount": 1012902,
+        "rev": "34ca302a9572963c02e385c056be37c85ff51b77",
+        "revCount": 1078969,
         "type": "git",
         "url": "https://github.com/NixOS/nixpkgs.git"
       },

@@ -62,10 +62,6 @@
 
     llm-agents = {
       inputs = {
-        blueprint = {
-          follows = "blueprint";
-        };
-
         bun2nix = {
           follows = "bun";
         };

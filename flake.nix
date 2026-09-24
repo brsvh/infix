@@ -71,7 +71,7 @@
       infix =
         (pipe
           (dirsToAttrs [
-            ./dev
+            ./tool
             ./src
           ])
           [
@@ -122,10 +122,10 @@
         };
 
         private = {
-          directory = ./dev;
+          directory = ./tool;
 
           modules = [
-            ./dev
+            ./tool
             ./test
           ];
 
