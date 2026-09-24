@@ -36,7 +36,7 @@ both flakes use the same Nixpkgs revision:
         };
       };
 
-      url = "git+https://codeberg.org/bingshan/infix.git";
+      url = "git+https://github.com/brsvh/infix.git";
     };
 
     nixpkgs = {
