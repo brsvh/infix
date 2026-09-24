@@ -1,0 +1,12 @@
+Allow moc depfiles to reference Qt headers outside the project directory.
+
+--- a/data/script-packages/qt/qt/moc.lua
++++ b/data/script-packages/qt/qt/moc.lua
+@@ -49,6 +49,7 @@ local function depfile_roots(environment)
+   for _, value in ipairs(environment.framework_include_directories or {}) do
+     append(result, value)
+   end
++  append(result, "@storeDir@")
+   return result
+ end
+ 
