@@ -1,0 +1,36 @@
+--- a/db/query.sqlite.sql
++++ b/db/query.sqlite.sql
+@@ -244,7 +244,10 @@
+         WHERE ni2.last_accessed_at < ni1.last_accessed_at
+             OR (ni2.last_accessed_at = ni1.last_accessed_at AND ni2.id <= ni1.id)
+     )
+-) <= ?;
++) <= ?
++OR ni1.id = (
++    SELECT id FROM narinfos ORDER BY last_accessed_at, id LIMIT 1
++);
+ 
+ -- name: GetOrphanedNarFiles :many
+ -- Find files that have no relationship to any narinfo
+--- a/pkg/database/sqlitedb/query.sqlite.sql.go
++++ b/pkg/database/sqlitedb/query.sqlite.sql.go
+@@ -778,6 +778,9 @@
+             OR (ni2.last_accessed_at = ni1.last_accessed_at AND ni2.id <= ni1.id)
+     )
+ ) <= ?
++OR ni1.id = (
++    SELECT id FROM narinfos ORDER BY last_accessed_at, id LIMIT 1
++)
+ `
+ 
+ // NOTE: This query uses a correlated subquery which is not optimal for performance.
+@@ -798,6 +801,9 @@
+ //	            OR (ni2.last_accessed_at = ni1.last_accessed_at AND ni2.id <= ni1.id)
+ //	    )
+ //	) <= ?
++//	OR ni1.id = (
++//	    SELECT id FROM narinfos ORDER BY last_accessed_at, id LIMIT 1
++//	)
+ func (q *Queries) GetLeastUsedNarInfos(ctx context.Context, fileSize uint64) ([]NarInfo, error) {
+ 	rows, err := q.db.QueryContext(ctx, getLeastUsedNarInfos, fileSize)
+ 	if err != nil {
