@@ -1,11 +1,19 @@
 {
+  cacert,
+  cargo,
   cmake,
+  curl,
   fetchFromGitHub,
+  git,
+  gnutar,
+  gzip,
   lib,
   llvmPackages_22,
   lua5_5,
   ninja,
+  python3,
   replaceVars,
+  stdenvNoCC,
   versionCheckHook,
   writeShellScript,
   zstd,
@@ -17,6 +25,10 @@ let
     licenses
     maintainers
     makeLibraryPath
+    ;
+
+  inherit (lib.fetchers)
+    proxyImpureEnvVars
     ;
 
   clangTools =
@@ -139,6 +151,104 @@ llvmPackages_22.libcxxStdenv.mkDerivation
       luatoSrc
       licryptoSrc
     ];
+
+    passthru = {
+      fetchSourceBundle =
+        {
+          hash,
+          pname,
+          src,
+          version,
+        }:
+        stdenvNoCC.mkDerivation {
+          inherit
+            src
+            version
+            ;
+
+          pname = "${pname}-source-bundle";
+
+          nativeBuildInputs = [
+            cacert
+            cargo
+            cmake
+            curl
+            git
+            gnutar
+            gzip
+            finalAttrs.finalPackage
+            llvmPackages_22.clang
+            llvmPackages_22.lld
+            python3
+          ];
+
+          dontConfigure = true;
+
+          buildPhase = ''
+            runHook preBuild
+            export HOME="$TMPDIR/home"
+            export XDG_DATA_HOME="$TMPDIR/lito"
+            mkdir -p "$HOME"
+            # Lito needs an unlocked fetch to populate the offline registry cache.
+            cp lito.lock "$TMPDIR/lito.lock"
+            lito fetch --output bundle
+            cmp lito.lock "$TMPDIR/lito.lock"
+            # Git hook samples embed the build platform's shell store paths.
+            # Keep only stable checkout metadata and locked registry releases.
+            rm -rf bundle/v1/git/*/.git/{hooks,index,logs}
+            python3 <<'PY'
+            import json
+            import tomllib
+            from pathlib import Path
+
+            with open("lito.lock", "rb") as lock_file:
+                packages = tomllib.load(lock_file)["packages"]
+            locked = {
+                (package["source"].removeprefix("registry+"), package["name"]): package
+                for package in packages
+                if package.get("source", "").startswith("registry+")
+            }
+            for path in Path("bundle/v1/registry/index").glob("*/*.json"):
+                cache = json.loads(path.read_text())
+                package = locked[(cache["registry"], cache["package"])]
+                body = json.loads(cache["body"])
+                body["releases"] = [
+                    release
+                    for release in body["releases"]
+                    if release["version"] == package["version"]
+                ]
+                assert len(body["releases"]) == 1, path
+                assert body["releases"][0]["checksum"] == package["checksum"], path
+                cache["body"] = json.dumps(body, sort_keys=True, separators=(",", ":"))
+                cache["etag"] = None
+                path.write_text(
+                    json.dumps(cache, sort_keys=True, separators=(",", ":")) + "\n"
+                )
+            PY
+            find bundle -exec touch -h -d @1 {} +
+            tar \
+              --sort=name \
+              --mtime=@1 \
+              --owner=0 \
+              --group=0 \
+              --numeric-owner \
+              -cf - \
+              -C bundle \
+              . \
+              | gzip -n > "$out"
+            runHook postBuild
+          '';
+
+          dontInstall = true;
+          dontFixup = true;
+
+          impureEnvVars = proxyImpureEnvVars;
+
+          outputHashMode = "flat";
+          outputHashAlgo = "sha256";
+          outputHash = hash;
+        };
+    };
 
     meta = {
       description = "Module-first C++ build tool";
