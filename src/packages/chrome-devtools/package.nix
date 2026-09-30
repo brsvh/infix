@@ -1,10 +1,10 @@
 {
   buildNpmPackage,
+  chromium,
   fetchFromGitHub,
-  google-chrome,
   lib,
   nodejs_24,
-  browser ? google-chrome,
+  browser ? chromium,
   ...
 }:
 let

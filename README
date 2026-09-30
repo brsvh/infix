@@ -66,6 +66,15 @@ pkgs = import nixpkgs {
 };
 #+end_src
 
+~chrome-devtools~ uses Chromium by default.  Select another browser with
+~browser~ when overriding the package, for example:
+
+#+begin_src nix
+pkgs.chrome-devtools.override {
+  browser = pkgs.google-chrome;
+}
+#+end_src
+
 *** Emacs Packages
 
 Use ~infix.overlays.emacs-packages~ to add manually packaged Emacs Lisp
