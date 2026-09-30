@@ -106,6 +106,8 @@
             infix-lib
             projectRoot
             ;
+
+          packageNixpkgs = nixpkgs;
         };
       }
       {
@@ -127,12 +129,14 @@
           modules = [
             ./tool
             ./test
+            ./ci/flake-module.nix
           ];
 
           outputs = [
             "checks"
             "devShells"
             "formatter"
+            "herculesCI"
           ];
         };
 
