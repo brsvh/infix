@@ -131,46 +131,36 @@ See the [[file:doc/infix.texi][Infix manual]] for examples and option descriptio
 ~flakeModules.devshell~, which adds generated configuration files to
 development shells and requires a ~devshell~ input.
 
-** Continuous Integration
+** Binary Cache
 
-Hercules CI builds the top-level derivations from ~overlays.default~ for
-~x86_64-linux~, together with the existing ~checks~.  Package evaluation
-uses the root flake's locked Nixpkgs and only the default overlay.  The CI
-module is loaded through ~private.modules~ and exports ~herculesCI~;
-ordinary overlay consumers do not need the private tool inputs.
+Use ~https://cache.bingshan.org~ as an additional Nix binary cache.
+On NixOS, add this to your configuration:
 
-Package targets are generated from the overlay, so new top-level packages
-are included automatically.  Every package output is exposed under
-~herculesCI.onPush.default.outputs.packages.<name>.<output>~.  Helper
-functions and nested scopes are excluded.  In particular,
-~nextcloud33Packages.apps.drawio~ is represented by the top-level
-~nextcloud-app-drawio~ package and is not enumerated a second time.
+#+begin_src nix
+{
+  nix = {
+    settings = {
+      extra-substituters = [
+        "https://cache.bingshan.org"
+      ];
 
-The current package targets are:
+      extra-trusted-public-keys = [
+        "cache.bingshan.org-1:HqcG/vJ7jeSLU48jV4yg8Ot+rUPP2v0vIAAnDEqVSvk="
+      ];
+    };
+  };
+}
+#+end_src
 
-- ~appmenu-gtk-module~
-- ~chrome-devtools~
-- ~elisp-format~
-- ~inn~
-- ~lito~
-- ~ncps~
-- ~nextcloud-app-drawio~
-- ~org-tools~
-- ~plasma-plugin-waywallen~
-- ~rime-frost~
-- ~waywallen~
+For other Nix installations, add these lines to ~/etc/nix/nix.conf~:
 
-The ~emacs-packages~ overlay is not enumerated.  ~elisp-format~ is still a
-default-overlay target, and its normal Emacs dependencies remain part of
-its closure.  The manual, development shells, formatter, and check results
-are not public publication roots.
+#+begin_src conf
+extra-substituters = https://cache.bingshan.org
+extra-trusted-public-keys = cache.bingshan.org-1:HqcG/vJ7jeSLU48jV4yg8Ot+rUPP2v0vIAAnDEqVSvk=
+#+end_src
 
-These jobs build on every branch and use the agents' private cache.  Public
-publication is not enabled by this configuration.  Its planned scope is
-successful ~main~ builds of the package outputs above and their runtime
-closures, using ~cache.bingshan.org~.  Google Chrome overrides and fleet
-system outputs are outside that scope.  Consumers using a different
-Nixpkgs revision or additional overlays may produce different store paths.
+Cache hits require matching store paths; using different Nixpkgs
+revisions or package overrides may require local builds.
 
 ** Documentation
 
