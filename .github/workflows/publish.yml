@@ -183,12 +183,15 @@ jobs:
         with:
           # Headscale assigns ci-cache-read through the preauth key.
           authkey: ${{ secrets.HEADSCALE_AUTH_KEY }}
-          args: --login-server=${{ vars.HEADSCALE_LOGIN_SERVER }} --accept-routes=false
+          args: --login-server=${{ vars.HEADSCALE_LOGIN_SERVER }}
           hostname: github-publisher-${{ github.run_id }}-${{ github.run_attempt }}
           log-mode: quiet
           sha256sum: 50748df1045e60b5b695f19f4c56b0da36c019948b440fb456b6584a50f0d8b9
           use-cache: 'false'
           version: 1.102.4
+      # The action enables subnet routes when it connects.
+      - name: Disable subnet routes
+        run: sudo tailscale set --accept-routes=false
       - name: Inspect and verify the private closure
         run: |
           nix path-info --recursive --json --json-format 1 \
