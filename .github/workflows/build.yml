@@ -16,15 +16,85 @@ defaults:
     shell: bash
 
 jobs:
-  build:
-    name: Package builds
+  changes:
+    name: Select affected packages
     runs-on: ubuntu-24.04
-    timeout-minutes: 360
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      packages: ${{ steps.packages.outputs.result }}
     steps:
       - name: Check out the PR merge revision
         uses: actions/checkout@v7.0.1
         with:
-          fetch-depth: 0
+          persist-credentials: false
+      - name: Match package and shared source changes
+        id: filter
+        uses: dorny/paths-filter@v4.0.3
+        with:
+          list-files: json
+          filters: |
+            packages:
+              - 'src/packages/*/**'
+            shared:
+              - 'flake.nix'
+              - 'flake.lock'
+              - 'lib/**'
+              - 'src/default.nix'
+              - 'src/overlays/default.nix'
+              - 'src/packages/*.nix'
+      - name: Select existing package directories
+        id: packages
+        uses: actions/github-script@v9
+        env:
+          CHANGED_FILES: ${{ steps.filter.outputs.packages_files }}
+          SHARED_CHANGED: ${{ steps.filter.outputs.shared }}
+        with:
+          script: |
+            const fs = require('node:fs/promises');
+            const directories = await fs.readdir('src/packages', {
+              withFileTypes: true,
+            });
+            const available = new Set(
+              directories.filter(entry => entry.isDirectory())
+                .map(entry => entry.name),
+            );
+            const selected = process.env.SHARED_CHANGED === 'true'
+              ? new Set(available)
+              : new Set(JSON.parse(process.env.CHANGED_FILES).map(
+                  file => file.split('/')[2],
+                ));
+            const dependents = new Map([['lito', ['waywallen']]]);
+
+            for (const name of selected) {
+              for (const dependent of dependents.get(name) ?? []) {
+                selected.add(dependent);
+              }
+            }
+
+            const packages = [...selected]
+              .filter(name => available.has(name)).sort();
+            core.info(
+              `Affected packages: ${packages.join(', ') || 'none'}`,
+            );
+            return packages;
+
+  build:
+    name: Build / ${{ matrix.package }}
+    needs: changes
+    if: needs.changes.outputs.packages != '[]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        package: ${{ fromJSON(needs.changes.outputs.packages) }}
+    steps:
+      - name: Check out the PR merge revision
+        uses: actions/checkout@v7.0.1
+        with:
           persist-credentials: false
       - name: Install Nix
         uses: cachix/install-nix-action@v31.11.1
@@ -37,75 +107,64 @@ jobs:
             experimental-features = nix-command flakes ca-derivations
             extra-substituters = https://cache.bingshan.org
             extra-trusted-public-keys = cache.bingshan.org-1:HqcG/vJ7jeSLU48jV4yg8Ot+rUPP2v0vIAAnDEqVSvk=
-      - name: Restore and save the runner Nix cache
+      - name: Restore and save the package Nix cache
         uses: nix-community/cache-nix-action@v7
         with:
-          primary-key: nix-pr-${{ runner.os }}-${{ runner.arch }}-2.34.8-${{ github.sha }}
-          restore-prefixes-first-match: nix-pr-${{ runner.os }}-${{ runner.arch }}-2.34.8-
+          primary-key: nix-build-${{ runner.os }}-${{ runner.arch }}-2.34.8-${{ matrix.package }}-${{ github.sha }}
+          restore-prefixes-first-match: nix-build-${{ runner.os }}-${{ runner.arch }}-2.34.8-${{ matrix.package }}-
           paths: |
             ~/.cache/nix
-      - name: Evaluate base and proposed packages
+      - name: Build every output of the selected package
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PACKAGE: ${{ matrix.package }}
         run: |
-          git worktree add --detach "$RUNNER_TEMP/infix-base" "$BASE_SHA"
-          evaluate() {
-            INFIX_SOURCE="$1" nix eval --json --impure \
-              --no-update-lock-file --no-write-lock-file \
-              --expr 'builtins.getFlake (builtins.getEnv "INFIX_SOURCE")' \
-              --apply '
-                flake:
-                let
-                  inherit (flake.inputs.nixpkgs.lib)
-                    filterAttrs
-                    isDerivation
-                    mapAttrs
-                    ;
+          # Nix interpolation must reach the evaluator unchanged.
+          # shellcheck disable=SC2016
+          nix build --no-link --print-build-logs --impure \
+            --no-update-lock-file --no-write-lock-file \
+            --expr '
+              let
+                flake = builtins.getFlake (
+                  builtins.getEnv "GITHUB_WORKSPACE"
+                );
 
-                  base = import flake.inputs.nixpkgs {
-                    system = "x86_64-linux";
+                base = import flake.inputs.nixpkgs {
+                  system = "x86_64-linux";
 
-                    config = {
-                      allowUnfree = false;
-                    };
+                  config = {
+                    allowUnfree = false;
                   };
+                };
 
-                  overlay = flake.overlays.default;
-                  packages = filterAttrs (_: isDerivation) (
-                    overlay (base.extend overlay) base
-                  );
-                in
-                mapAttrs (_: package: package.drvPath) packages
-              '
-          }
-          evaluate "$RUNNER_TEMP/infix-base" > "$RUNNER_TEMP/base.json"
-          evaluate "$GITHUB_WORKSPACE" > "$RUNNER_TEMP/proposed.json"
-      - name: Select affected packages
-        uses: actions/github-script@v9
-        with:
-          script: |
-            const fs = require('node:fs/promises');
-            const path = require('node:path');
-            const read = async name => JSON.parse(await fs.readFile(
-              path.join(process.env.RUNNER_TEMP, name), 'utf8'
-            ));
-            const base = await read('base.json');
-            const proposed = await read('proposed.json');
-            const changed = Object.entries(proposed).filter(([name, drv]) =>
-              !Object.hasOwn(base, name) || base[name] !== drv
-            );
-            for (const [name, drv] of changed) {
-              if (!/^\/nix\/store\/[0-9a-df-np-sv-z]{32}-[^/\s]+\.drv$/.test(drv)) {
-                throw new Error(`Invalid derivation for ${name}`);
-              }
-              core.info(`Build ${name}: ${drv}`);
-            }
-            await fs.writeFile(path.join(process.env.RUNNER_TEMP, 'installables'),
-              changed.map(([, drv]) => `${drv}^*\n`).join(''));
-            core.info(`${changed.length} affected packages`);
-      - name: Build affected packages
+                pkgs = base.extend flake.overlays.default;
+                package = pkgs.${builtins.getEnv "PACKAGE"};
+              in
+              map (output: package.${output}) package.outputs
+            '
+
+  result:
+    name: Package builds
+    needs: [changes, build]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Verify all selected package builds succeeded
+        env:
+          FILTER_RESULT: ${{ needs.changes.result }}
+          PACKAGES: ${{ needs.changes.outputs.packages }}
+          BUILD_RESULT: ${{ needs.build.result }}
         run: |
-          mapfile -t installables < "$RUNNER_TEMP/installables"
-          if (( ${#installables[@]} )); then
-            nix build --no-link --print-build-logs "${installables[@]}"
+          if [[ "$FILTER_RESULT" != success ]]; then
+            echo 'Package path filtering did not succeed.' >&2
+            exit 1
+          fi
+
+          if [[ "$PACKAGES" == '[]' && "$BUILD_RESULT" == skipped ]]; then
+            echo 'No packages were affected.'
+          elif [[ "$BUILD_RESULT" == success ]]; then
+            echo 'All affected packages built successfully.'
+          else
+            echo 'One or more package builds did not succeed.' >&2
+            exit 1
           fi
