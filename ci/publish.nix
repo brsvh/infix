@@ -1,16 +1,105 @@
 {
+  cache,
+  drvPath,
   hci-effects,
   name,
   outputs,
   pkgs,
+  rev,
+  tag,
 }:
 let
   inherit (pkgs.lib)
     attrValues
     concatMapStringsSep
+    toJSON
     ;
 
-  publicKey = "cache.bingshan.org-1:HqcG/vJ7jeSLU48jV4yg8Ot+rUPP2v0vIAAnDEqVSvk=";
+  state =
+    pkgs.writeText "published-${name}.json"
+      (toJSON {
+        inherit
+          cache
+          drvPath
+          rev
+          ;
+
+        version = 1;
+      });
+
+  request =
+    pkgs.writeText "publish-request.json"
+      (toJSON {
+        inherit
+          name
+          rev
+          tag
+          ;
+      });
+
+  prepare = pkgs.writeText "prepare-publication.mjs" ''
+    import fs from 'node:fs';
+
+    const { name, rev, tag } = JSON.parse(
+      fs.readFileSync(process.argv[2], 'utf8'),
+    );
+    const secrets = JSON.parse(
+      fs.readFileSync(process.env.HERCULES_CI_SECRETS_JSON, 'utf8'),
+    );
+    const token = secrets.git?.data.token;
+    const github = 'https://api.github.com/repos/brsvh/infix';
+    const expected = `ci/package/''${name}/''${rev}/`;
+
+    if (
+      process.env.HERCULES_CI_PROJECT_PATH !== 'github/brsvh/infix' ||
+      !/^[a-z0-9-]+$/.test(name) || !/^[0-9a-f]{40}$/.test(rev) ||
+      !tag.startsWith(expected) ||
+      !/^[0-9a-f-]{36}$/.test(tag.slice(expected.length)) || !token
+    ) {
+      throw new Error('Invalid publication context');
+    }
+
+    async function githubRequest(path, method = 'GET', missing = false) {
+      const response = await fetch(`''${github}/''${path}`, {
+        method,
+        headers: {
+          authorization: `Bearer ''${token}`,
+          'user-agent': 'infix-ci',
+        },
+        signal: AbortSignal.timeout(30000),
+      });
+
+      if (missing && response.status === 404) {
+        return null;
+      }
+
+      if (method === 'DELETE' && response.status === 422) {
+        const ref = await githubRequest(
+          path.replace('git/refs/', 'git/ref/'), 'GET', true,
+        );
+
+        if (ref === null) {
+          return null;
+        }
+      }
+
+      if (!response.ok) {
+        throw new Error(`GitHub returned HTTP ''${response.status}`);
+      }
+
+      return response.status === 204 ? null : response.json();
+    }
+
+    const head = await githubRequest('git/ref/heads/main');
+    // Remove the trigger after its builds, while the GitToken is still fresh.
+    await githubRequest(`git/refs/tags/''${tag}`, 'DELETE');
+
+    if (head.object.sha === rev) {
+      fs.writeFileSync('publish-current', "");
+    } else {
+      console.log('Skipping publication from a superseded main revision');
+    }
+  '';
 in
 hci-effects.mkEffect {
   name = "publish-${name}";
@@ -19,6 +108,7 @@ hci-effects.mkEffect {
   inputs = with pkgs; [
     jq
     nix
+    nodejs
   ];
 
   # Referencing every output makes it a build dependency of the effect.
@@ -32,6 +122,10 @@ hci-effects.mkEffect {
       );
 
   secretsMap = {
+    git = {
+      type = "GitToken";
+    };
+
     public-cache = "public-cache-upload";
   };
 
@@ -45,8 +139,14 @@ hci-effects.mkEffect {
     (
       set -euo pipefail
       umask 077
-      public=https://cache.bingshan.org
-      key=${publicKey}
+      node ${prepare} ${request}
+
+      if [[ ! -f publish-current ]]; then
+        exit 0
+      fi
+
+      public=${cache.url}
+      key=${cache.publicKey}
 
       nix path-info --recursive --json --json-format 1 \
         --stdin < "$ROOTS" > source.json
@@ -90,6 +190,9 @@ hci-effects.mkEffect {
           --option trusted-public-keys "$key" "$probe"
         echo "The package closure has been published and verified."
       fi
+
+      # A failed build, upload, or verification must not advance the baseline.
+      putStateFile published-${name} ${state}
     )
   '';
 }
