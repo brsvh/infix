@@ -1,4 +1,4 @@
-name: Pull request
+name: PR package builds and flake checks
 
 on:
   pull_request:
@@ -17,7 +17,7 @@ defaults:
 
 jobs:
   build:
-    name: PR builds
+    name: Affected package builds and flake checks
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     steps:
