@@ -1,0 +1,49 @@
+name: check
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: check-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  flake:
+    name: Flake checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Check out the PR merge revision
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31.11.1
+        with:
+          install_url: https://releases.nixos.org/nix/nix-2.34.8/install
+          extra_nix_config: |
+            accept-flake-config = false
+            allow-import-from-derivation = false
+            builders =
+            experimental-features = nix-command flakes ca-derivations
+            extra-substituters = https://cache.bingshan.org
+            extra-trusted-public-keys = cache.bingshan.org-1:HqcG/vJ7jeSLU48jV4yg8Ot+rUPP2v0vIAAnDEqVSvk=
+      - name: Restore and save the check Nix cache
+        uses: nix-community/cache-nix-action@v7
+        with:
+          primary-key: nix-check-${{ runner.os }}-${{ runner.arch }}-2.34.8-${{ github.sha }}
+          restore-prefixes-first-match: nix-check-${{ runner.os }}-${{ runner.arch }}-2.34.8-
+          paths: |
+            ~/.cache/nix
+      - name: Check source formatting
+        run: nix fmt --no-update-lock-file --no-write-lock-file -- --fail-on-change
+      - name: Check flake outputs and run flake checks
+        run: nix flake check --no-update-lock-file --no-write-lock-file --print-build-logs
