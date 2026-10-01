@@ -1,0 +1,112 @@
+name: Pull request
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    name: PR builds
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31.11.1
+        with:
+          install_url: https://releases.nixos.org/nix/nix-2.34.8/install
+          extra_nix_config: |
+            accept-flake-config = false
+            allow-import-from-derivation = false
+            builders =
+            experimental-features = nix-command flakes ca-derivations
+            extra-substituters = https://cache.bingshan.org
+            extra-trusted-public-keys = cache.bingshan.org-1:HqcG/vJ7jeSLU48jV4yg8Ot+rUPP2v0vIAAnDEqVSvk=
+      - name: Restore and save the runner Nix cache
+        uses: nix-community/cache-nix-action@v7
+        with:
+          primary-key: nix-pr-${{ runner.os }}-${{ runner.arch }}-2.34.8-${{ github.sha }}
+          restore-prefixes-first-match: nix-pr-${{ runner.os }}-${{ runner.arch }}-2.34.8-
+          paths: |
+            ~/.cache/nix
+      - name: Evaluate base and proposed packages
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git worktree add --detach "$RUNNER_TEMP/infix-base" "$BASE_SHA"
+          evaluate() {
+            INFIX_SOURCE="$1" nix eval --json --impure \
+              --no-update-lock-file --no-write-lock-file \
+              --expr 'builtins.getFlake (builtins.getEnv "INFIX_SOURCE")' \
+              --apply '
+                flake:
+                let
+                  inherit (flake.inputs.nixpkgs.lib)
+                    filterAttrs
+                    isDerivation
+                    mapAttrs
+                    ;
+
+                  base = import flake.inputs.nixpkgs {
+                    system = "x86_64-linux";
+
+                    config = {
+                      allowUnfree = false;
+                    };
+                  };
+
+                  overlay = flake.overlays.default;
+                  packages = filterAttrs (_: isDerivation) (
+                    overlay (base.extend overlay) base
+                  );
+                in
+                mapAttrs (_: package: package.drvPath) packages
+              '
+          }
+          evaluate "$RUNNER_TEMP/infix-base" > "$RUNNER_TEMP/base.json"
+          evaluate "$GITHUB_WORKSPACE" > "$RUNNER_TEMP/proposed.json"
+      - name: Select affected packages
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('node:fs/promises');
+            const path = require('node:path');
+            const read = async name => JSON.parse(await fs.readFile(
+              path.join(process.env.RUNNER_TEMP, name), 'utf8'
+            ));
+            const base = await read('base.json');
+            const proposed = await read('proposed.json');
+            const changed = Object.entries(proposed).filter(([name, drv]) =>
+              !Object.hasOwn(base, name) || base[name] !== drv
+            );
+            for (const [name, drv] of changed) {
+              if (!/^\/nix\/store\/[0-9a-df-np-sv-z]{32}-[^/\s]+\.drv$/.test(drv)) {
+                throw new Error(`Invalid derivation for ${name}`);
+              }
+              core.info(`Build ${name}: ${drv}`);
+            }
+            await fs.writeFile(path.join(process.env.RUNNER_TEMP, 'installables'),
+              changed.map(([, drv]) => `${drv}^*\n`).join(''));
+            core.info(`${changed.length} affected packages`);
+      - name: Build affected packages
+        run: |
+          mapfile -t installables < "$RUNNER_TEMP/installables"
+          if (( ${#installables[@]} )); then
+            nix build --no-link --print-build-logs "${installables[@]}"
+          fi
+      - name: Run flake checks
+        run: nix flake check --no-update-lock-file --no-write-lock-file --print-build-logs
