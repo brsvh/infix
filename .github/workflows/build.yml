@@ -1,4 +1,4 @@
-name: PR package builds and flake checks
+name: build
 
 on:
   pull_request:
@@ -8,7 +8,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: pr-${{ github.event.pull_request.number }}
+  group: build-pr-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 defaults:
@@ -17,11 +17,12 @@ defaults:
 
 jobs:
   build:
-    name: Affected package builds and flake checks
+    name: Package builds
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     steps:
-      - uses: actions/checkout@v7.0.1
+      - name: Check out the PR merge revision
+        uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -108,5 +109,3 @@ jobs:
           if (( ${#installables[@]} )); then
             nix build --no-link --print-build-logs "${installables[@]}"
           fi
-      - name: Run flake checks
-        run: nix flake check --no-update-lock-file --no-write-lock-file --print-build-logs
