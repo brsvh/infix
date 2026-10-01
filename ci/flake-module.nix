@@ -69,10 +69,16 @@ in
           }
           // mapAttrs' (
             name: outputs:
-            nameValuePair "package-${name}" {
+            nameValuePair "buildPackage/${name}" {
               outputs = {
                 packages = outputs;
-
+              };
+            }
+          ) packageOutputs
+          // mapAttrs' (
+            name: outputs:
+            nameValuePair "publishPackage/${name}" {
+              outputs = {
                 effects = {
                   publish = import ./publish.nix {
                     inherit
