@@ -265,14 +265,6 @@ let
     treefmt = {
       data = {
         formatter = {
-          emacs-lisp = {
-            command = "elisp-format";
-
-            includes = [
-              "*.el"
-            ];
-          };
-
           markdown = {
             command = "mdformat";
 
@@ -316,7 +308,6 @@ let
         in
         with pkgs;
         [
-          elisp-format
           mdformatWithPlugins
           nixfmt
           treefmt
