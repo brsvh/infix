@@ -24,6 +24,7 @@ let
     import fs from 'node:fs';
     import { randomUUID } from 'node:crypto';
     import { spawnSync } from 'node:child_process';
+    import { setTimeout as sleep } from 'node:timers/promises';
 
     const { cache, packages, rev } = JSON.parse(
       fs.readFileSync(process.argv[2], 'utf8'),
@@ -44,12 +45,69 @@ let
       throw new Error('Invalid planning context or missing credentials');
     }
 
+    async function fetchResponse(url, options = {}) {
+      const { method = 'GET' } = options;
+      const host = new URL(url).host;
+      // A lost POST response does not prove that a build tag was not created.
+      const attempts = ['GET', 'HEAD', 'PUT'].includes(method) ? 5 : 1;
+
+      for (let attempt = 1; attempt <= attempts; attempt += 1) {
+        let reason;
+        let retryAfter = 0;
+
+        try {
+          const response = await fetch(url, {
+            ...options,
+            signal: AbortSignal.timeout(30000),
+          });
+          // Reading the body can fail after the headers have arrived.
+          const text = await response.text();
+
+          if (![408, 429, 500, 502, 503, 504].includes(response.status)) {
+            return { response, text };
+          }
+
+          reason = `HTTP ''${response.status}`;
+          const header = response.headers.get('retry-after');
+          retryAfter = /^\d+$/.test(header ?? "")
+            ? Number(header) * 1000
+            : Date.parse(header) - Date.now();
+        } catch (error) {
+          reason = error.cause?.code ?? error.code ?? error.name;
+
+          if (![
+            'ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT', 'EAI_AGAIN',
+            'UND_ERR_CONNECT_TIMEOUT', 'UND_ERR_HEADERS_TIMEOUT',
+            'UND_ERR_BODY_TIMEOUT', 'UND_ERR_SOCKET', 'TimeoutError',
+          ].includes(reason)) {
+            throw error;
+          }
+        }
+
+        if (attempt === attempts) {
+          throw new Error(
+            `''${method} ''${host} failed after ''${attempt} attempts: ` +
+            reason,
+          );
+        }
+
+        const delay = Math.min(30000, Math.max(
+          1000 * 2 ** (attempt - 1), retryAfter || 0,
+        ));
+        console.warn(
+          `Retrying ''${method} ''${host} after ''${reason} in ''${delay} ms ` +
+          `(attempt ''${attempt + 1}/''${attempts})`,
+        );
+        await sleep(delay);
+      }
+    }
+
     async function request(url, token, options = {}) {
       const {
         method = 'GET', body, missing = false,
         contentType = 'application/json',
       } = options;
-      const response = await fetch(url, {
+      const { response, text } = await fetchResponse(url, {
         method,
         headers: {
           authorization: `Bearer ''${token}`,
@@ -57,7 +115,6 @@ let
           ...(body === undefined ? {} : { 'content-type': contentType }),
         },
         body: body === undefined ? undefined : JSON.stringify(body),
-        signal: AbortSignal.timeout(30000),
       });
 
       if (missing && response.status === 404) {
@@ -65,10 +122,12 @@ let
       }
 
       if (!response.ok) {
-        throw new Error(`''${method} failed with HTTP ''${response.status}`);
+        throw new Error(
+          `''${method} ''${new URL(url).host} returned ` +
+          `HTTP ''${response.status}`,
+        );
       }
 
-      const text = await response.text();
       return text ? JSON.parse(text) : null;
     }
 
@@ -88,10 +147,9 @@ let
           throw new Error('Invalid package output path');
         }
 
-        const response = await fetch(`''${cache.url}/''${hash[1]}.narinfo`, {
-          method: 'HEAD',
-          signal: AbortSignal.timeout(30000),
-        });
+        const { response } = await fetchResponse(
+          `''${cache.url}/''${hash[1]}.narinfo`, { method: 'HEAD' },
+        );
 
         if (response.status === 404) {
           return false;
