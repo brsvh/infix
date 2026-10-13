@@ -1,0 +1,31 @@
+Use one C++ runtime for x2t and its plugins. Private static libstdc++
+copies let preempted regex vtables destroy another copy's classic locale.
+
+--- a/Common/base.pri
++++ b/Common/base.pri
+@@ -341,10 +341,6 @@ core_linux {
+ }
+ 
+ core_linux {
+-	equals(TEMPLATE, app):CONFIG += core_static_link_libstd
+-	plugin:CONFIG += core_static_link_libstd
+-
+-
+ 	equals(TEMPLATE, app):QMAKE_LFLAGS_RELEASE += -Wl,-s
+ 	plugin:QMAKE_LFLAGS_RELEASE += -Wl,-s
+ }
+@@ -509,14 +505,6 @@ core_linux {
+ }
+ 
+ core_linux {
+-core_static_link_libstd {
+-	!core_linux_clang {
+-		QMAKE_LFLAGS += -static-libstdc++ -static-libgcc
+-	} else {
+-		# TODO: add libc++abi?
+-	}
+-	message(core_static_link_libstd)
+-}
+ plugin {
+ 	TARGET_EXT = .so
+ }
