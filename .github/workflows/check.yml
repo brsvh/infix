@@ -44,6 +44,6 @@ jobs:
           paths: |
             ~/.cache/nix
       - name: Check source formatting
-        run: nix fmt --no-update-lock-file --no-write-lock-file -- --fail-on-change
+        run: nix fmt --no-update-lock-file --no-write-lock-file -- --ci
       - name: Check flake outputs and run flake checks
         run: nix flake check --no-update-lock-file --no-write-lock-file --print-build-logs
