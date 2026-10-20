@@ -2,6 +2,7 @@
   autoPatchelfHook,
   cmake,
   fetchFromGitHub,
+  gettext,
   lib,
   libglvnd,
   ninja,
@@ -15,13 +16,13 @@
 }:
 stdenv.mkDerivation (finalAttrs: {
   pname = "plasma-plugin-waywallen";
-  version = "0.3.3";
+  version = "0.4.3";
 
   src = fetchFromGitHub {
     owner = "waywallen";
     repo = "waywallen-display";
     tag = "v${finalAttrs.version}";
-    hash = "sha256-zqDI++m4lMeggrjq7GtTso6pn6NDVqvipEFvpDe0lC8=";
+    hash = "sha256-pYc7n+FB3Y3BHP+bkExhqZWXZPUEXbNcTYFQIj+rBS4=";
   };
 
   cmakeFlags = [
@@ -32,6 +33,7 @@ stdenv.mkDerivation (finalAttrs: {
   nativeBuildInputs = [
     autoPatchelfHook
     cmake
+    gettext
     ninja
     pkg-config
     unzip
