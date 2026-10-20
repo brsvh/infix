@@ -46,38 +46,38 @@ let
   rstdSrc = fetchFromGitHub {
     owner = "litocpp";
     repo = "rstd";
-    rev = "7b45034d8e833398da6bff834b652a1dc40a6a4f";
-    hash = "sha256-KIAITRp98if9So19sGqP39bGgep9NafETMZUBAc9qNk=";
+    rev = "9cf950ecccb50b480ddeb51b7bcdf3b2141c9d89";
+    hash = "sha256-oNSNNcVVnniJqsmMBYMuBJ2s24jwDK6qtKoDHFVLG2Q=";
   };
 
   luatoSrc = fetchFromGitHub {
     owner = "litocpp";
     repo = "luato";
-    rev = "9ad07ca2604022319c0178b7f5543220baf87050";
-    hash = "sha256-C1DlycFz5z+e+A5FsL18ePc4KQYscn2z4cJKPBgkj8w=";
+    rev = "df0c6f2d1cce2051b4711d36067619eda7933683";
+    hash = "sha256-XL1evcZbZJ2LfTi5T9UQ+4YBEw5YnDsGeY3IBS+Fs5U=";
   };
 
   licryptoSrc = fetchFromGitHub {
     owner = "litocpp";
     repo = "licrypto";
-    rev = "18345239cc68869646a6522e6e258a4eba3dec20";
-    hash = "sha256-UVk3BeTA8+cBvB9XFXKNo1ua4rBflpKif7NF+9a9l/Q=";
+    rev = "40da005cbd7faf1328fd29a01cb0c534d6998612";
+    hash = "sha256-Aussj13CS3lAIR0TmmU7NgVQg2l2QUdiNS47oa7Fcaw=";
   };
 in
 llvmPackages_22.libcxxStdenv.mkDerivation
   (finalAttrs: {
     pname = "lito";
-    version = "0.8.1";
+    version = "0.8.7";
 
     src = fetchFromGitHub {
       owner = "litocpp";
       repo = "lito";
       tag = "v${finalAttrs.version}";
-      hash = "sha256-6A39ta0iMgWyvuteMYD+z56r4+1wBKbUXwEh8o5Gqig=";
+      hash = "sha256-2VWgxz5tbgzzCe7IvUYVPIg8kc9ydzvq33lmwl1Tuq4=";
     };
 
     patches = [
-      (replaceVars ./qt-depfile-roots.patch {
+      (replaceVars ./depfile-store-roots.patch {
         storeDir = builtins.storeDir;
       })
     ];

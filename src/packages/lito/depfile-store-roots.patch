@@ -1,0 +1,12 @@
+Allow build-tool depfiles to reference immutable system headers in Nix.
+
+--- a/driver/src/build/generated/declaration.cppm
++++ b/driver/src/build/generated/declaration.cppm
+@@ -863,6 +863,7 @@
+     }
+     for (const auto& root : input_roots) depfile_roots.push(root.path.clone());
+     depfile_roots.push(PathBuf::from(*package_root));
++    depfile_roots.push(PathBuf::from("@storeDir@"_str));
+     depfile_roots.push(generated_root.clone());
+     auto script_digest = rstd_try(action_file_digest(script_.as_path()));
+     auto identity_text = rstd::format("build-tool-action-v1\n{}\n{}\n{}\n{}\n{}",
