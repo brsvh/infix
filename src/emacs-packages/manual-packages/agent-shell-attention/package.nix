@@ -11,12 +11,12 @@ let
     maintainers
     ;
 
-  version = "0.0.2";
+  version = "0.0.3";
 
   src = fetchgit {
     url = "https://github.com/ultronozm/agent-shell-attention.el.git";
-    rev = "ae2df16c1d481d0e182cc85fafa62c53431aab36";
-    hash = "sha256-eukR9iviR5bpAfwB7Sq130TGMNR8OI+QtJSSXXnUiqc=";
+    rev = "aaf599121445ead597a14da62bad580c8897ee6c";
+    hash = "sha256-sXHjZ8791aBstTDODJU/2G//7ulEGyyFQwAQp7cNYiw=";
   };
 
   meta = {
