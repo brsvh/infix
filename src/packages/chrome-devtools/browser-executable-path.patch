@@ -1,19 +1,25 @@
-diff --git a/src/browser.ts b/src/browser.ts
---- a/src/browser.ts
-+++ b/src/browser.ts
-@@ -171,7 +171,14 @@ export function detectDisplay(): void {
- }
- 
- export async function launch(options: McpLaunchOptions): Promise<Browser> {
--  const {channel, executablePath, headless, isolated} = options;
-+  const {channel, headless, isolated} = options;
-+  // puppeteer-core does not read the executable path set by the Nix wrapper.
-+  const executablePath =
-+    options.executablePath ??
-+    (!channel || channel === 'stable'
-+      ? process.env['PUPPETEER_EXECUTABLE_PATH']
-+      : undefined);
+--- a/src/BrowserManager.ts
++++ b/src/BrowserManager.ts
+@@ -205,7 +205,6 @@
+   async #launch(): Promise<Browser> {
+     const {
+       channel,
+-      executablePath,
+       headless,
+       isolated = false,
+       categoryExtensions: enableExtensions,
+@@ -218,6 +217,13 @@
+       ignoreDefaultChromeArg,
+       proxyServer,
+     } = this.#serverArgs;
+-
 +
-   const profileDirName =
-     channel && channel !== 'stable'
-       ? `chrome-profile-${channel}`
++    // puppeteer-core does not read the path set by the Nix wrapper.
++    const executablePath =
++      this.#serverArgs.executablePath ??
++      (!channel || channel === 'stable'
++        ? process.env['PUPPETEER_EXECUTABLE_PATH']
++        : undefined);
++
+     const profileDirName =
+       channel && channel !== 'stable'
