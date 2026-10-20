@@ -11,12 +11,12 @@ let
     maintainers
     ;
 
-  version = "0-unstable-2026-02-13";
+  version = "0-unstable-2026-10-02";
 
   src = fetchgit {
     url = "https://github.com/jethrokuan/agent-shell-manager.git";
-    rev = "53b73f13ed1ac9d2de128465a8504a7265490ea7";
-    hash = "sha256-JPB/OnOhYbM0LMirSYQhpB6hW8SAg0Ri6buU8tMP7rA=";
+    rev = "d3ee783751f0870e36d715c43381a80b1114ac72";
+    hash = "sha256-D6/aHnRK4uKtmR3vcQk7s3s2XZ+/UlZiDyWOtPUZKno=";
   };
 
   meta = {
