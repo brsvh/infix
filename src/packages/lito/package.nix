@@ -15,7 +15,6 @@
   replaceVars,
   stdenvNoCC,
   versionCheckHook,
-  writeShellScript,
   zstd,
 }:
 let
@@ -36,12 +35,6 @@ let
       {
         enableLibcxx = true;
       };
-
-  # The clang-tools wrapper uses Bash syntax despite its /bin/sh shebang.
-  clangScanDeps = writeShellScript "clang-scan-deps" ''
-    exec ${llvmPackages_22.libcxxStdenv.shell} \
-      ${clangTools}/bin/clang-scan-deps "$@"
-  '';
 
   rstdSrc = fetchFromGitHub {
     owner = "litocpp";
@@ -127,9 +120,7 @@ llvmPackages_22.libcxxStdenv.mkDerivation
       (cmakeFeature "CMAKE_INSTALL_RPATH" (
         makeLibraryPath finalAttrs.buildInputs
       ))
-      (cmakeFeature "CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS" "${
-        clangScanDeps
-      }")
+      (cmakeFeature "CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS" "${clangTools}/bin/clang-scan-deps")
       (cmakeBool "FETCHCONTENT_FULLY_DISCONNECTED" true)
       (cmakeBool "LITO_USE_SYSTEM_ZSTD" true)
     ];
