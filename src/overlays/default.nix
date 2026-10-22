@@ -21,18 +21,6 @@ let
 in
 packages
 // {
-  nextcloud33Packages =
-    prev.nextcloud33Packages.overrideScope
-      (
-        _nextcloudFinal: nextcloudPrev: {
-          apps = nextcloudPrev.apps.extend (
-            _appsFinal: _appsPrev: {
-              drawio = packages.nextcloud-app-drawio;
-            }
-          );
-        }
-      );
-
   onlyoffice-documentserver =
     let
       inherit (prev.lib)
