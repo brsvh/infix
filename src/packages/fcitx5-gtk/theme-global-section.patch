@@ -1,0 +1,54 @@
+Subject: [PATCH] Accept global options in client-side UI themes
+
+The Plasma theme generator writes SupportedScale before the first section.
+GKeyFile rejects this valid Fcitx configuration and the GTK input panel
+silently falls back to the default theme. Add an initial group in memory,
+as the classic UI configuration reader already does, for both the selected
+theme and the fallback theme. GTK4 shares the GTK3 implementation.
+
+diff --git a/gtk3/fcitxtheme.cpp b/gtk3/fcitxtheme.cpp
+--- a/gtk3/fcitxtheme.cpp
++++ b/gtk3/fcitxtheme.cpp
+@@ -239,6 +239,25 @@ auto locateXdgDataFile(const char *file) {
+     return locateXdgFile(g_get_user_data_dir(), g_get_system_data_dirs(), file);
+ }
+ 
++bool loadTheme(GKeyFile *configFile, const char *name) {
++    UniqueCPtr<gchar, g_free> path(
++        g_build_filename("fcitx5/themes", name, "theme.conf", nullptr));
++    auto filename = locateXdgDataFile(path.get());
++    gchar *content = nullptr;
++
++    if (!filename ||
++        !g_file_get_contents(filename.get(), &content, nullptr, nullptr)) {
++        return false;
++    }
++
++    // Fcitx permits global options, while GKeyFile requires a group first.
++    // Match the handling of classicui.conf without changing theme files.
++    UniqueCPtr<gchar, g_free> ini(g_strdup_printf("[Group]\n%s", content));
++    g_free(content);
++    return g_key_file_load_from_data(configFile, ini.get(), -1,
++                                     G_KEY_FILE_NONE, nullptr);
++}
++
+ template <typename M, typename K>
+ decltype(&std::declval<M>().begin()->second) findValue(M &&m, K &&key) {
+     auto iter = m.find(key);
+@@ -715,14 +734,9 @@ void Theme::load(const std::string &name) {
+     name_ = name;
+ 
+     UniqueCPtr<GKeyFile, g_key_file_unref> configFile{g_key_file_new()};
+-    UniqueCPtr<gchar, g_free> filename(
+-        g_build_filename("fcitx5/themes", name.data(), "theme.conf", nullptr));
+-    bool result = g_key_file_load_from_data_dirs(
+-        configFile.get(), filename.get(), nullptr, G_KEY_FILE_NONE, nullptr);
++    bool result = loadTheme(configFile.get(), name.c_str());
+     if (!result) {
+-        result = g_key_file_load_from_data_dirs(
+-            configFile.get(), "fcitx5/themes/default/theme.conf", nullptr,
+-            G_KEY_FILE_NONE, nullptr);
++        result = loadTheme(configFile.get(), "default");
+         name_ = "default";
+     }
+ 
