@@ -10,6 +10,11 @@
     "zigHash": "N-V-__8AABzkUgISeKGgXAzgtutgJsZc0-kkeqBBscJgMkvy"
   },
   {
+    "hash": "sha256-V0QDwSO92JJpn3iUv1+F+Bzjyg2a8YzpiFBBqLnR4/A=",
+    "url": "https://deps.files.ghostty.org/ghostty-themes-release-20261005-151109-31756e7.tgz",
+    "zigHash": "N-V-__8AADNBBQDD4MFOa3Y7R_A8PHIeWQ1IZdOiBFZS3nZ7"
+  },
+  {
     "hash": "sha256-Veg7FtCRCCUCvxSb9FfzH0IJLFmCZQ4/+657SIcb8Ro=",
     "url": "https://deps.files.ghostty.org/pixels-12207ff340169c7d40c570b4b6a97db614fe47e0d83b5801a932dcd44917424c8806.tar.gz",
     "zigHash": "N-V-__8AADYiAAB_80AWnH1AxXC0tql9thT-R-DYO1gBqTLc"
@@ -135,6 +140,11 @@
     "zigHash": "ghostty-1.3.2-dev-5UdBC1AtcQWmWYtcqSHFSjhTO1jn8jD5dK9rJ_M7awf5"
   },
   {
+    "hash": "sha256-gRmkd7svYpbeDS8+W6mBgnsy4VgzOOGsD4UE9hTZKcE=",
+    "url": "https://github.com/ghostty-org/ghostty/archive/a2e440396403385680008e456a741a7776091412.tar.gz",
+    "zigHash": "ghostty-1.3.2-dev-5UdBC_qIewUDn1YOAhdr9LRbORjQ_zcsVMd8EygTzjWq"
+  },
+  {
     "hash": "sha256-kBTbVw2wbj+/z623syqordrMaWnnAWUGg8HHRCitumw=",
     "url": "https://deps.files.ghostty.org/gobject-2026-07-28-36-1.tar.zst",
     "zigHash": "gobject-0.3.2-Skun7F6HogCMynX2JqeSHS7xr-8pK4ob-qRFIcEasVi3"
@@ -153,6 +163,11 @@
     "hash": "sha256-fnb8f6seescoxSs1u7PluMY5hBq/x/4aS8sTBQWUvJ4=",
     "url": "https://deps.files.ghostty.org/uucode-2826a37a4562284fdacd8fa029d49509cc9bffcd.tar.gz",
     "zigHash": "uucode-0.2.0-ZZjBPlK5VADj7fdoq7G8LIHzD5o6FSkcBXXrRWr4jnrA"
+  },
+  {
+    "hash": "sha256-aNI1Q8ssbF39vfOLODdeDG1BKlxftyzga9E596TSUTI=",
+    "url": "https://github.com/jacobsandlund/uucode/archive/9d55524551411b493cca41ca06363625d90aff1e.tar.gz",
+    "zigHash": "uucode-0.2.0-ZZjBPuuFVgC8YZ8eld4fOKsZANLIhTFMzULQxhkLi1C7"
   },
   {
     "hash": "sha256-PqBQ6QWIfEa8oaLBjkHW7fV0wapuv7xc88UoRideT6g=",
