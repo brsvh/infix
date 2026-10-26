@@ -1,0 +1,190 @@
+--- a/migrations/sqlite/20260525175108_add_build_trace_entries.sql
++++ b/migrations/sqlite/20260525175108_add_build_trace_entries.sql
+@@ -1,30 +1,4 @@
+ -- +goose Up
+--- disable the enforcement of foreign-keys constraints
+-PRAGMA foreign_keys = off;
+--- create "new_narinfos" table
+-CREATE TABLE `new_narinfos` (`id` integer NOT NULL PRIMARY KEY AUTOINCREMENT, `created_at` datetime NOT NULL DEFAULT (CURRENT_TIMESTAMP), `updated_at` datetime NULL, `hash` text NOT NULL, `store_path` text NULL, `url` text NULL, `compression` text NULL, `file_hash` text NULL, `file_size` integer NULL, `nar_hash` text NULL, `nar_size` integer NULL, `deriver` text NULL, `system` text NULL, `ca` text NULL, `last_accessed_at` datetime NULL DEFAULT (CURRENT_TIMESTAMP), CONSTRAINT `narinfos_file_size_nonneg` CHECK (file_size >= 0), CONSTRAINT `narinfos_nar_size_nonneg` CHECK (nar_size >= 0));
+--- copy rows from old table "narinfos" to new temporary table "new_narinfos"
+-INSERT INTO `new_narinfos` (`id`, `created_at`, `updated_at`, `hash`, `store_path`, `url`, `compression`, `file_hash`, `file_size`, `nar_hash`, `nar_size`, `deriver`, `system`, `ca`, `last_accessed_at`) SELECT `id`, `created_at`, `updated_at`, `hash`, `store_path`, `url`, `compression`, `file_hash`, `file_size`, `nar_hash`, `nar_size`, `deriver`, `system`, `ca`, `last_accessed_at` FROM `narinfos`;
+--- drop "narinfos" table after copying rows
+-DROP TABLE `narinfos`;
+--- rename temporary table "new_narinfos" to "narinfos"
+-ALTER TABLE `new_narinfos` RENAME TO `narinfos`;
+--- create index "narinfo_hash" to table: "narinfos"
+-CREATE UNIQUE INDEX `narinfo_hash` ON `narinfos` (`hash`);
+--- create index "narinfo_last_accessed_at" to table: "narinfos"
+-CREATE INDEX `narinfo_last_accessed_at` ON `narinfos` (`last_accessed_at`);
+--- create "new_nar_files" table
+-CREATE TABLE `new_nar_files` (`id` integer NOT NULL PRIMARY KEY AUTOINCREMENT, `created_at` datetime NOT NULL DEFAULT (CURRENT_TIMESTAMP), `updated_at` datetime NULL, `hash` text NOT NULL, `compression` text NOT NULL DEFAULT (''), `file_size` integer NOT NULL, `query` text NOT NULL DEFAULT (''), `total_chunks` integer NOT NULL DEFAULT (0), `chunking_started_at` datetime NULL, `verified_at` datetime NULL, `last_accessed_at` datetime NULL DEFAULT (CURRENT_TIMESTAMP));
+--- copy rows from old table "nar_files" to new temporary table "new_nar_files"
+-INSERT INTO `new_nar_files` (`id`, `created_at`, `updated_at`, `hash`, `compression`, `file_size`, `query`, `total_chunks`, `chunking_started_at`, `verified_at`, `last_accessed_at`) SELECT `id`, `created_at`, `updated_at`, `hash`, `compression`, `file_size`, `query`, `total_chunks`, `chunking_started_at`, `verified_at`, `last_accessed_at` FROM `nar_files`;
+--- drop "nar_files" table after copying rows
+-DROP TABLE `nar_files`;
+--- rename temporary table "new_nar_files" to "nar_files"
+-ALTER TABLE `new_nar_files` RENAME TO `nar_files`;
+--- create index "narfile_hash_compression_query" to table: "nar_files"
+-CREATE UNIQUE INDEX `narfile_hash_compression_query` ON `nar_files` (`hash`, `compression`, `query`);
+--- create index "narfile_last_accessed_at" to table: "nar_files"
+-CREATE INDEX `narfile_last_accessed_at` ON `nar_files` (`last_accessed_at`);
+ -- create "build_trace_entries" table
+ CREATE TABLE `build_trace_entries` (`id` integer NOT NULL PRIMARY KEY AUTOINCREMENT, `created_at` datetime NOT NULL DEFAULT (CURRENT_TIMESTAMP), `updated_at` datetime NULL, `drv_path` text NOT NULL, `output_name` text NOT NULL, `out_path` text NOT NULL, `raw_json` text NOT NULL);
+ -- create index "buildtraceentry_drv_path_output_name" to table: "build_trace_entries"
+@@ -35,29 +9,7 @@
+ CREATE UNIQUE INDEX `buildtracesignature_build_trace_entry_id_key_name` ON `build_trace_signatures` (`build_trace_entry_id`, `key_name`);
+ -- create index "buildtracesignature_build_trace_entry_id" to table: "build_trace_signatures"
+ CREATE INDEX `buildtracesignature_build_trace_entry_id` ON `build_trace_signatures` (`build_trace_entry_id`);
+--- enable back the enforcement of foreign-keys constraints
+-PRAGMA foreign_keys = on;
+ 
+ -- +goose Down
+--- reverse: create index "buildtracesignature_build_trace_entry_id" to table: "build_trace_signatures"
+-DROP INDEX `buildtracesignature_build_trace_entry_id`;
+--- reverse: create index "buildtracesignature_build_trace_entry_id_key_name" to table: "build_trace_signatures"
+-DROP INDEX `buildtracesignature_build_trace_entry_id_key_name`;
+--- reverse: create "build_trace_signatures" table
+ DROP TABLE `build_trace_signatures`;
+--- reverse: create index "buildtraceentry_drv_path_output_name" to table: "build_trace_entries"
+-DROP INDEX `buildtraceentry_drv_path_output_name`;
+--- reverse: create "build_trace_entries" table
+ DROP TABLE `build_trace_entries`;
+--- reverse: create index "narfile_last_accessed_at" to table: "nar_files"
+-DROP INDEX `narfile_last_accessed_at`;
+--- reverse: create index "narfile_hash_compression_query" to table: "nar_files"
+-DROP INDEX `narfile_hash_compression_query`;
+--- reverse: create "new_nar_files" table
+-DROP TABLE `new_nar_files`;
+--- reverse: create index "narinfo_last_accessed_at" to table: "narinfos"
+-DROP INDEX `narinfo_last_accessed_at`;
+--- reverse: create index "narinfo_hash" to table: "narinfos"
+-DROP INDEX `narinfo_hash`;
+--- reverse: create "new_narinfos" table
+-DROP TABLE `new_narinfos`;
+--- a/migrations/sqlite/20260605211804_add_dechunk_residue_flagged_at_to_nar_files.sql
++++ b/migrations/sqlite/20260605211804_add_dechunk_residue_flagged_at_to_nar_files.sql
+@@ -1,43 +1,5 @@
+ -- +goose Up
+--- disable the enforcement of foreign-keys constraints
+-PRAGMA foreign_keys = off;
+--- create "new_narinfos" table
+-CREATE TABLE `new_narinfos` (`id` integer NOT NULL PRIMARY KEY AUTOINCREMENT, `created_at` datetime NOT NULL DEFAULT (CURRENT_TIMESTAMP), `updated_at` datetime NULL, `hash` text NOT NULL, `store_path` text NULL, `url` text NULL, `compression` text NULL, `file_hash` text NULL, `file_size` integer NULL, `nar_hash` text NULL, `nar_size` integer NULL, `deriver` text NULL, `system` text NULL, `ca` text NULL, `last_accessed_at` datetime NULL DEFAULT (CURRENT_TIMESTAMP), CONSTRAINT `narinfos_file_size_nonneg` CHECK (file_size >= 0), CONSTRAINT `narinfos_nar_size_nonneg` CHECK (nar_size >= 0));
+--- copy rows from old table "narinfos" to new temporary table "new_narinfos"
+-INSERT INTO `new_narinfos` (`id`, `created_at`, `updated_at`, `hash`, `store_path`, `url`, `compression`, `file_hash`, `file_size`, `nar_hash`, `nar_size`, `deriver`, `system`, `ca`, `last_accessed_at`) SELECT `id`, `created_at`, `updated_at`, `hash`, `store_path`, `url`, `compression`, `file_hash`, `file_size`, `nar_hash`, `nar_size`, `deriver`, `system`, `ca`, `last_accessed_at` FROM `narinfos`;
+--- drop "narinfos" table after copying rows
+-DROP TABLE `narinfos`;
+--- rename temporary table "new_narinfos" to "narinfos"
+-ALTER TABLE `new_narinfos` RENAME TO `narinfos`;
+--- create index "narinfo_hash" to table: "narinfos"
+-CREATE UNIQUE INDEX `narinfo_hash` ON `narinfos` (`hash`);
+--- create index "narinfo_last_accessed_at" to table: "narinfos"
+-CREATE INDEX `narinfo_last_accessed_at` ON `narinfos` (`last_accessed_at`);
+--- create "new_nar_files" table
+-CREATE TABLE `new_nar_files` (`id` integer NOT NULL PRIMARY KEY AUTOINCREMENT, `created_at` datetime NOT NULL DEFAULT (CURRENT_TIMESTAMP), `updated_at` datetime NULL, `hash` text NOT NULL, `compression` text NOT NULL DEFAULT (''), `file_size` integer NOT NULL, `query` text NOT NULL DEFAULT (''), `total_chunks` integer NOT NULL DEFAULT (0), `chunking_started_at` datetime NULL, `verified_at` datetime NULL, `bytes_stored_at` datetime NULL, `dechunk_residue_flagged_at` datetime NULL, `last_accessed_at` datetime NULL DEFAULT (CURRENT_TIMESTAMP));
+--- copy rows from old table "nar_files" to new temporary table "new_nar_files"
+-INSERT INTO `new_nar_files` (`id`, `created_at`, `updated_at`, `hash`, `compression`, `file_size`, `query`, `total_chunks`, `chunking_started_at`, `verified_at`, `bytes_stored_at`, `last_accessed_at`) SELECT `id`, `created_at`, `updated_at`, `hash`, `compression`, `file_size`, `query`, `total_chunks`, `chunking_started_at`, `verified_at`, `bytes_stored_at`, `last_accessed_at` FROM `nar_files`;
+--- drop "nar_files" table after copying rows
+-DROP TABLE `nar_files`;
+--- rename temporary table "new_nar_files" to "nar_files"
+-ALTER TABLE `new_nar_files` RENAME TO `nar_files`;
+--- create index "narfile_hash_compression_query" to table: "nar_files"
+-CREATE UNIQUE INDEX `narfile_hash_compression_query` ON `nar_files` (`hash`, `compression`, `query`);
+--- create index "narfile_last_accessed_at" to table: "nar_files"
+-CREATE INDEX `narfile_last_accessed_at` ON `nar_files` (`last_accessed_at`);
+--- enable back the enforcement of foreign-keys constraints
+-PRAGMA foreign_keys = on;
++ALTER TABLE `nar_files` ADD COLUMN `dechunk_residue_flagged_at` datetime NULL;
+ 
+ -- +goose Down
+--- reverse: create index "narfile_last_accessed_at" to table: "nar_files"
+-DROP INDEX `narfile_last_accessed_at`;
+--- reverse: create index "narfile_hash_compression_query" to table: "nar_files"
+-DROP INDEX `narfile_hash_compression_query`;
+--- reverse: create "new_nar_files" table
+-DROP TABLE `new_nar_files`;
+--- reverse: create index "narinfo_last_accessed_at" to table: "narinfos"
+-DROP INDEX `narinfo_last_accessed_at`;
+--- reverse: create index "narinfo_hash" to table: "narinfos"
+-DROP INDEX `narinfo_hash`;
+--- reverse: create "new_narinfos" table
+-DROP TABLE `new_narinfos`;
++ALTER TABLE `nar_files` DROP COLUMN `dechunk_residue_flagged_at`;
+--- a/migrations/sqlite/atlas.sum
++++ b/migrations/sqlite/atlas.sum
+@@ -1,4 +1,4 @@
+-h1:ti9XB1DK7TJLTzFtlcdWbSdVjQtkiyg9Rgiwfh/rba8=
++h1:gIBFqMoZRRHVHwEdpiQmT5Jhd9LJ3e2e1NzEXwBXx1I=
+ 20241210054814_create-narinfos-table.sql h1:e8MnIArqBCoUNv8/b0yDnx6ikbaSoPuMp3+j+C/cIPk=
+ 20241210054829_create-nars-table.sql h1:odrcFJuEF0MT6AIEa5Vn8ghpHV7EhIwfOjsIal1ZUW0=
+ 20241213014846_add-query-to-nars-table.sql h1:gFPvhup77Qua+8KlsWxqRLQqbXSr1IZSnpVDOFlR5cM=
+@@ -14,9 +14,9 @@
+ 20260301000000_add_verified_at_to_nar_files.sql h1:NxNO9QJIibslyviRRNK3K2MkBAddVrXLsP2NSReaucc=
+ 20260318053903_add_pinned_closures_table.sql h1:9rWx0agGLMR6TDaq1jKPZNKlch4LOnKjb/OaHO5nPmI=
+ 20260521021523_ent_baseline.sql h1:PkCUJB7uREMN8ERWLxSj3msPhjXZYTU3E6PUSmNOGBI=
+-20260525175108_add_build_trace_entries.sql h1:w416Kn6T/oGdR1VMg3AnszTj7c57H0hUQtykNyB+YN0=
+-20260605021047_add_bytes_stored_at_to_nar_files.sql h1:Z++j2y5hL8N68xNTl6e8rzKVlfmQx2mJPK8cVS4U13U=
+-20260605045447_repair_url_none_xz_narinfos.sql h1:PtAUtCYWG1/45c2LRXPlL6nyy0tp2dkaqKeDPIWaHow=
+-20260605211804_add_dechunk_residue_flagged_at_to_nar_files.sql h1:uRfitvFatgcU+YfYwEhV+xmOL3vs7pMx2R2yxf+seaw=
+-20260607034027_add_narinfo_upstream_url.sql h1:bAOzHW/bT4jZNfQL0UgahBtyaLnbJuSsdXwHkRLP+QM=
+-20260607182925_add_staging_state.sql h1:I8CJvkwgrIXI5uB5kaqfymDhfwK4sFvJht6RFPFn2t4=
++20260525175108_add_build_trace_entries.sql h1:9YcNu9d7n5v+gcWDEfcTqdH0OWlilBW0YM3O6wDolaY=
++20260605021047_add_bytes_stored_at_to_nar_files.sql h1:CtWQypHgizM8qUTrPhZVzmRVn/3psh9V9NELQv3aJXU=
++20260605045447_repair_url_none_xz_narinfos.sql h1:lTXxSU03rZ09nqD17MarDbF70IdITi6OTZDa4WozWC0=
++20260605211804_add_dechunk_residue_flagged_at_to_nar_files.sql h1:eOy1hfMi01VDmutXD6D53GM8xZ0owprCRSSFWI/YR2U=
++20260607034027_add_narinfo_upstream_url.sql h1:xrt+2b3/tbp/3v1MwUH+Bg/TfQbSj7y52JZnbdgFcPI=
++20260607182925_add_staging_state.sql h1:l466Cv0APGyhQPfzfjyyXrap1Ztfn7sSsyNTTjqXj9o=
+--- a/pkg/database/migrate/migrate_test.go
++++ b/pkg/database/migrate/migrate_test.go
+@@ -820,3 +820,52 @@
+ type emptyFS struct{}
+ 
+ func (emptyFS) Open(_ string) (fs.File, error) { return nil, fs.ErrNotExist }
++
++func TestSQLiteUpgradePreservesNarinfoMetadata(t *testing.T) {
++	for _, boundary := range []string{"20260525175108", "20260605211804"} {
++		t.Run(boundary, func(t *testing.T) {
++			db, cleanup := openSQLiteTest(t)
++			t.Cleanup(cleanup)
++			db.SetMaxOpenConns(1)
++			sub := mustSubFS(t, "sqlite")
++			var previous []string
++
++			for _, name := range listMigrationFiles(t, sub) {
++				if name[:14] < boundary {
++					previous = append(previous, name)
++				}
++			}
++
++			applyMigrationsRaw(t, db, database.TypeSQLite, sub, previous)
++			seedDbmateSchemaMigrations(t, db, database.TypeSQLite, fileVersions(previous))
++			mustExec(t, db, "INSERT INTO narinfos (id, hash) VALUES (1, 'narinfo')")
++			mustExec(t, db, "INSERT INTO nar_files (id, hash, file_size) VALUES (1, 'nar', 100)")
++			mustExec(t, db, "INSERT INTO narinfo_references (narinfo_id, reference) VALUES (1, 'dependency')")
++			mustExec(t, db, "INSERT INTO narinfo_signatures (narinfo_id, signature) VALUES (1, 'signature')")
++			mustExec(t, db, "INSERT INTO narinfo_nar_files (narinfo_id, nar_file_id) VALUES (1, 1)")
++			mustExec(t, db, "INSERT INTO chunks (id, hash, size) VALUES (1, 'chunk', 100)")
++			mustExec(t, db, "INSERT INTO nar_file_chunks (nar_file_id, chunk_id, chunk_index) VALUES (1, 1, 0)")
++
++			opts := migrate.Options{DB: db, Dialect: database.TypeSQLite, MigrationsFS: sub}
++
++			for range 2 {
++				require.NoError(t, migrate.Up(t.Context(), opts))
++
++				for _, table := range []string{
++					"narinfos", "nar_files", "narinfo_references",
++					"narinfo_signatures", "narinfo_nar_files", "nar_file_chunks",
++				} {
++					var count int
++					require.NoError(t, db.QueryRow("SELECT count(*) FROM "+table).Scan(&count))
++					assert.Equal(t, 1, count, table)
++				}
++
++				var reference, signature string
++				require.NoError(t, db.QueryRow("SELECT reference FROM narinfo_references WHERE narinfo_id = 1").Scan(&reference))
++				require.NoError(t, db.QueryRow("SELECT signature FROM narinfo_signatures WHERE narinfo_id = 1").Scan(&signature))
++				assert.Equal(t, "dependency", reference)
++				assert.Equal(t, "signature", signature)
++			}
++		})
++	}
++}
