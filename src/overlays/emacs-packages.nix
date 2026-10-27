@@ -37,6 +37,14 @@ final: prev: {
               p.melpaPackages.sly-macrostep.overrideAttrs
                 (
                   finalAttrs: prevAttrs: {
+                    version = "20191211.1630";
+
+                    src = fetchgit {
+                      url = "https://github.com/joaotavora/sly-macrostep.git";
+                      rev = "5113e4e926cd752b1d0bcc1508b3ebad5def5fad";
+                      hash = "sha256-GVDlwWUIT/IiTPqDQ3w54Tsz6NNl2bMtB3Y4Yh8Srts=";
+                    };
+
                     patches = prevAttrs.patches or [ ] ++ [
                       (
                         melpa-packages
