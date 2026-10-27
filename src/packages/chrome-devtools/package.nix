@@ -19,19 +19,19 @@ let
   devtoolsFrontend = fetchFromGitHub {
     owner = "ChromeDevTools";
     repo = "devtools-frontend";
-    rev = "f7e7785de52d6f5955d6a9c5956c2fe2d520d091";
-    hash = "sha256-GfIU5l9jWStxIbiT5Ewpm/gM6WAO7V4aiSEf8skCOto=";
+    rev = "f22c645573adc85e4553747c577eebb874c3fb43";
+    hash = "sha256-Lst8HJczmpxxN/0Q9cG+Pxzhz/C91dGUpxPr8N5XHDQ=";
   };
 in
 buildNpmPackage (finalAttrs: {
   pname = "chrome-devtools";
-  version = "1.11.0";
+  version = "1.12.0";
 
   src = fetchFromGitHub {
     owner = "ChromeDevTools";
     repo = "chrome-devtools-mcp";
     tag = "chrome-devtools-mcp-v${finalAttrs.version}";
-    hash = "sha256-20PUWZqzbI1MbXjcpKP04V7D9DiQFurMTSgsXx5pwWs=";
+    hash = "sha256-VsjhByYciw/uTYRdWw3eJOdiKOLReY5LjZ7kPWCOzHU=";
 
     postFetch = ''
       ${getExe npm-lockfile-fix} "$out/package-lock.json"
@@ -39,7 +39,7 @@ buildNpmPackage (finalAttrs: {
   };
 
   nodejs = nodejs_24;
-  npmDepsHash = "sha256-wVdgJw5+yhTmQv+xOiX6CkIALejt82EXliXkpJjEUDA=";
+  npmDepsHash = "sha256-ZUJQSiR8UCs/0Y+Dk9hlAJUO+Dswn9wbDpUDI5re2ns=";
   npmBuildScript = "bundle";
 
   # Fetch the pinned submodule separately, without its Git history.
