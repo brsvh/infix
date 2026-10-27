@@ -49,14 +49,14 @@ let
 in
 llvmPackages_22.stdenv.mkDerivation (finalAttrs: {
   pname = "waywallen";
-  version = "0.4.4";
+  version = "0.5.0";
 
   src = fetchFromGitHub {
     owner = "waywallen";
     repo = "waywallen";
     tag = "v${finalAttrs.version}";
     fetchLFS = true;
-    hash = "sha256-Uv3QfAYcOKE17Ic2reKWELIU+3Q5lKHj68UwycwaKuo=";
+    hash = "sha256-oeovQrL/Lr+D3o93D/kpjjt/pYtW2Q+cikX4JaClBjw=";
   };
 
   sourceBundle = lito.fetchSourceBundle {
@@ -66,7 +66,7 @@ llvmPackages_22.stdenv.mkDerivation (finalAttrs: {
       version
       ;
 
-    hash = "sha256-5MBL8eNAlAcAAQGz+DuJ0bSf/rrufDZVH9usbPG4V8c=";
+    hash = "sha256-IWXpYwLidftgKap9ZoRKpSzakBmi4iQRJFD57wHj5ww=";
   };
 
   disallowedReferences = [
