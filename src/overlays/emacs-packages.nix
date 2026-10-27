@@ -22,14 +22,6 @@ final: prev: {
                 ;
 
               directory = manual-packages;
-            }
-            // {
-              ghostel =
-                f.callPackage
-                  (manual-packages + /ghostel/package.nix)
-                  {
-                    upstreamGhostel = p.manualPackages.ghostel;
-                  };
             };
 
           melpaPackages = p.melpaPackages // {
