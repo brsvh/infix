@@ -88,9 +88,10 @@ async function currentRevision(rev, token) {
       await response.body?.cancel().catch(() => undefined);
     }
   } catch (error) {
-    const code = error.cause?.code ?? error.code ?? error.name;
-    const failure = new Error(`Cannot read main: ${code}`);
-    failure.retryable = networkCodes.has(code);
+    const code = error.cause?.code ?? error.code;
+    const type = typeof code === 'string' ? code : error.name;
+    const failure = new Error(`Cannot read main: ${type}`);
+    failure.retryable = networkCodes.has(type);
     throw failure;
   }
 
