@@ -1,7 +1,6 @@
 {
   lib,
   pkgs,
-  projectRoot,
   ...
 }:
 let
@@ -91,6 +90,46 @@ let
       data;
 
   files = {
+    biome = {
+      data = {
+        "$schema" =
+          "https://biomejs.dev/schemas/${pkgs.biome.version}/schema.json";
+
+        assist = {
+          enabled = false;
+        };
+
+        formatter = {
+          indentStyle = "space";
+          indentWidth = 2;
+          lineEnding = "lf";
+          lineWidth = 80;
+        };
+
+        javascript = {
+          formatter = {
+            arrowParentheses = "always";
+            expand = "always";
+            operatorLinebreak = "before";
+            quoteStyle = "single";
+            semicolons = "always";
+            trailingCommas = "all";
+          };
+        };
+
+        linter = {
+          enabled = false;
+        };
+      };
+
+      engine =
+        request:
+        (pkgs.formats.json { }).generate
+          (baseNameOf request.output)
+          request.data;
+      output = "biome.json";
+    };
+
     editorconfig = {
       data = {
         root = true;
@@ -116,6 +155,13 @@ let
           indent_style = "space";
           max_line_length = 80;
           trim_trailing_whitespace = false;
+        };
+
+        "*.mjs" = {
+          indent_size = 2;
+          indent_style = "space";
+          max_line_length = 80;
+          tab_width = 2;
         };
 
         "*.org" = {
@@ -265,6 +311,20 @@ let
     treefmt = {
       data = {
         formatter = {
+          biome = {
+            command = "biome";
+
+            includes = [
+              "*.mjs"
+            ];
+
+            options = [
+              "format"
+              "--write"
+              "--config-path=${mkFile files.biome}"
+            ];
+          };
+
           markdown = {
             command = "mdformat";
 
@@ -294,6 +354,10 @@ let
         };
       };
 
+      depends = [
+        "biome"
+      ];
+
       engine = toml;
       output = "treefmt.toml";
 
@@ -308,6 +372,7 @@ let
         in
         with pkgs;
         [
+          biome
           mdformatWithPlugins
           nixfmt
           treefmt

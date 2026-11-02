@@ -5,6 +5,7 @@
 
 # devshells
 /.editorconfig
+/biome.json
 /prek.toml
 /treefmt.toml
 
