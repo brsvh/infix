@@ -19,67 +19,63 @@ jobs:
   changes:
     name: Select affected packages
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    permissions:
-      contents: read
-      pull-requests: read
+    timeout-minutes: 30
     outputs:
-      packages: ${{ steps.packages.outputs.result }}
+      packages: ${{ steps.packages.outputs.packages }}
     steps:
-      - name: Check out the PR merge revision
+      - name: Check out the PR merge revision and its parents
         uses: actions/checkout@v7.0.1
         with:
+          fetch-depth: 2
           persist-credentials: false
-      - name: Match package and shared source changes
-        id: filter
-        uses: dorny/paths-filter@v4.0.3
+      - name: Set up Nix
+        uses: ./.github/actions/setup-nix
         with:
-          list-files: json
-          filters: |
-            packages:
-              - 'src/packages/*/**'
-            shared:
-              - 'flake.nix'
-              - 'flake.lock'
-              - 'lib/**'
-              - 'src/default.nix'
-              - 'src/overlays/default.nix'
-              - 'src/packages/*.nix'
-      - name: Select existing package directories
+          cache-scope: select
+      - name: Compare package derivations
         id: packages
-        uses: actions/github-script@v9
-        env:
-          CHANGED_FILES: ${{ steps.filter.outputs.packages_files }}
-          SHARED_CHANGED: ${{ steps.filter.outputs.shared }}
-        with:
-          script: |
-            const fs = require('node:fs/promises');
-            const directories = await fs.readdir('src/packages', {
-              withFileTypes: true,
-            });
-            const available = new Set(
-              directories.filter(entry => entry.isDirectory())
-                .map(entry => entry.name),
-            );
-            const selected = process.env.SHARED_CHANGED === 'true'
-              ? new Set(available)
-              : new Set(JSON.parse(process.env.CHANGED_FILES).map(
-                  file => file.split('/')[2],
-                ));
-            const dependents = new Map([['lito', ['waywallen']]]);
+        run: |
+          base="$RUNNER_TEMP/infix-base"
+          candidate="$RUNNER_TEMP/infix-candidate.json"
+          previous="$RUNNER_TEMP/infix-previous.json"
+          test "$(git show -s --format=%P HEAD | wc -w)" -eq 2
+          git worktree add --detach "$base" "$(git rev-parse HEAD^1)"
+          trap 'git worktree remove --force "$base"' EXIT
 
-            for (const name of selected) {
-              for (const dependent of dependents.get(name) ?? []) {
-                selected.add(dependent);
-              }
-            }
+          evaluate() {
+            # Both revisions use this checkout's package extraction logic.
+            # shellcheck disable=SC2016
+            CI_SOURCE="$1" nix eval --json --impure \
+              --no-update-lock-file --no-write-lock-file \
+              --expr '
+                let
+                  flake = builtins.getFlake (
+                    builtins.getEnv "CI_SOURCE"
+                  );
+                in
+                (import ./ci/packages.nix {
+                  nixpkgs = flake.inputs.nixpkgs;
+                  overlay = flake.overlays.default;
+                  system = "x86_64-linux";
+                }).manifest
+              '
+          }
 
-            const packages = [...selected]
-              .filter(name => available.has(name)).sort();
-            core.info(
-              `Affected packages: ${packages.join(', ') || 'none'}`,
-            );
-            return packages;
+          evaluate "$GITHUB_WORKSPACE" > "$candidate"
+
+          if ! evaluate "$base" > "$previous"; then
+            echo '::warning::Base evaluation failed; building all CI packages.'
+            echo '{}' > "$previous"
+          fi
+
+          packages=$(jq -cn \
+            --slurpfile candidate "$candidate" \
+            --slurpfile previous "$previous" '
+              $candidate[0] | to_entries |
+              map(select(.value != $previous[0][.key]) | .key) | sort
+            ')
+          echo "Selected packages: $packages"
+          echo "packages=$packages" >> "$GITHUB_OUTPUT"
 
   build:
     name: Build ${{ matrix.package }}
@@ -114,18 +110,14 @@ jobs:
                   builtins.getEnv "GITHUB_WORKSPACE"
                 );
 
-                base = import flake.inputs.nixpkgs {
+                catalog = import ./ci/packages.nix {
+                  nixpkgs = flake.inputs.nixpkgs;
+                  overlay = flake.overlays.default;
                   system = "x86_64-linux";
-
-                  config = {
-                    allowUnfree = false;
-                  };
                 };
-
-                pkgs = base.extend flake.overlays.default;
-                package = pkgs.${builtins.getEnv "PACKAGE"};
               in
-              map (output: package.${output}) package.outputs
+              builtins.attrValues
+                catalog.packageOutputs.${builtins.getEnv "PACKAGE"}
             '
 
   result:
@@ -137,12 +129,12 @@ jobs:
     steps:
       - name: Verify all selected package builds succeeded
         env:
-          FILTER_RESULT: ${{ needs.changes.result }}
+          SELECTION_RESULT: ${{ needs.changes.result }}
           PACKAGES: ${{ needs.changes.outputs.packages }}
           BUILD_RESULT: ${{ needs.build.result }}
         run: |
-          if [[ "$FILTER_RESULT" != success ]]; then
-            echo 'Package path filtering did not succeed.' >&2
+          if [[ "$SELECTION_RESULT" != success ]]; then
+            echo 'Package selection did not succeed.' >&2
             exit 1
           fi
 
