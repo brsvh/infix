@@ -1,4 +1,4 @@
-name: build
+name: Build packages
 
 on:
   pull_request:
@@ -82,7 +82,7 @@ jobs:
             return packages;
 
   build:
-    name: Build / ${{ matrix.package }}
+    name: Build ${{ matrix.package }}
     needs: changes
     if: needs.changes.outputs.packages != '[]'
     runs-on: ubuntu-24.04
@@ -96,24 +96,10 @@ jobs:
         uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
-      - name: Install Nix
-        uses: cachix/install-nix-action@v31.11.1
+      - name: Set up Nix
+        uses: ./.github/actions/setup-nix
         with:
-          install_url: https://releases.nixos.org/nix/nix-2.34.8/install
-          extra_nix_config: |
-            accept-flake-config = false
-            allow-import-from-derivation = false
-            builders =
-            experimental-features = nix-command flakes ca-derivations
-            extra-substituters = https://cache.bingshan.org
-            extra-trusted-public-keys = cache.bingshan.org-1:HqcG/vJ7jeSLU48jV4yg8Ot+rUPP2v0vIAAnDEqVSvk=
-      - name: Restore and save the package Nix cache
-        uses: nix-community/cache-nix-action@v7
-        with:
-          primary-key: nix-build-${{ runner.os }}-${{ runner.arch }}-2.34.8-${{ matrix.package }}-${{ github.sha }}
-          restore-prefixes-first-match: nix-build-${{ runner.os }}-${{ runner.arch }}-2.34.8-${{ matrix.package }}-
-          paths: |
-            ~/.cache/nix
+          cache-scope: build-${{ matrix.package }}
       - name: Build every output of the selected package
         env:
           PACKAGE: ${{ matrix.package }}

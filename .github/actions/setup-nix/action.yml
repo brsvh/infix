@@ -1,0 +1,32 @@
+name: Set up Nix
+description: Install Nix and reuse the CI store cache
+
+inputs:
+  cache-scope:
+    description: Cache namespace for this job
+    required: true
+  nix-version:
+    description: Nix version used by the runner
+    default: 2.34.8
+
+runs:
+  using: composite
+  steps:
+    - name: Install Nix
+      uses: cachix/install-nix-action@v31.11.1
+      with:
+        install_url: https://releases.nixos.org/nix/nix-${{ inputs.nix-version }}/install
+        extra_nix_config: |
+          accept-flake-config = false
+          allow-import-from-derivation = false
+          builders =
+          experimental-features = nix-command flakes ca-derivations
+          extra-substituters = https://cache.bingshan.org
+          extra-trusted-public-keys = cache.bingshan.org-1:HqcG/vJ7jeSLU48jV4yg8Ot+rUPP2v0vIAAnDEqVSvk=
+    - name: Restore and save the Nix cache
+      uses: nix-community/cache-nix-action@v7
+      with:
+        primary-key: nix-${{ inputs.cache-scope }}-${{ runner.os }}-${{ runner.arch }}-${{ inputs.nix-version }}-${{ github.sha }}
+        restore-prefixes-first-match: nix-${{ inputs.cache-scope }}-${{ runner.os }}-${{ runner.arch }}-${{ inputs.nix-version }}-
+        paths: |
+          ~/.cache/nix
