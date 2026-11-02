@@ -406,20 +406,19 @@ async function publish({ cache, name, rev, roots }) {
           throw new Error(`Cache is still missing: ${missing.join(', ')}`);
         }
       });
-
-      // Verify one complete NAR, preserving the existing download probe.
-      const probe = roots.reduce((smallest, root) =>
-        source[root].narSize < source[smallest].narSize ? root : smallest,
-      );
-      await retry(name, 'Download probe', () =>
-        nix(verification, [
-          probe,
-        ]),
-      );
-      console.log(`${name}: published and verified ${rev}`);
-    } else {
-      console.log(`${name}: cache metadata and signatures already verified`);
     }
+
+    // Recheck content on cache hits too: a previous run may have uploaded
+    // successfully but failed or stopped before the download probe completed.
+    const probe = roots.reduce((smallest, root) =>
+      source[root].narSize < source[smallest].narSize ? root : smallest,
+    );
+    await retry(name, 'Download probe', () =>
+      nix(verification, [
+        probe,
+      ]),
+    );
+    console.log(`${name}: cache closure verified for ${rev}`);
   } finally {
     if (directory) {
       await fs.rm(directory, {
