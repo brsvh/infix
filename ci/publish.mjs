@@ -114,7 +114,7 @@ async function currentRevision(rev, token) {
   return head === rev;
 }
 
-async function nix(args, paths) {
+async function nix(args, paths, timeout = 5 * 60 * 1000) {
   const child = spawn(
     'nix',
     [
@@ -134,6 +134,18 @@ async function nix(args, paths) {
   let stdout = '';
   let stderr = '';
   let inputError;
+  let processError;
+  let timedOut = false;
+  let killTimer;
+
+  function terminate() {
+    if (killTimer) {
+      return;
+    }
+
+    child.kill('SIGTERM');
+    killTimer = setTimeout(() => child.kill('SIGKILL'), 5000);
+  }
 
   child.stdout.setEncoding('utf8');
   child.stderr.setEncoding('utf8');
@@ -145,8 +157,14 @@ async function nix(args, paths) {
     stderr += chunk;
   });
 
-  const result = await new Promise((resolve, reject) => {
-    child.on('error', reject);
+  const timer = setTimeout(() => {
+    timedOut = true;
+    terminate();
+  }, timeout);
+  const result = await new Promise((resolve) => {
+    child.on('error', (error) => {
+      processError = error;
+    });
     child.on('close', (code, signal) => {
       resolve({
         code,
@@ -157,11 +175,23 @@ async function nix(args, paths) {
       inputError = error;
 
       if (error.code !== 'EPIPE') {
-        child.kill();
+        terminate();
       }
     });
     child.stdin.end(`${paths.join('\n')}\n`);
+  }).finally(() => {
+    clearTimeout(timer);
+    clearTimeout(killTimer);
   });
+
+  if (timedOut) {
+    // A deadline alone does not establish a transient network failure.
+    throw new Error(`nix ${args[0]} exceeded its ${timeout / 60000}m deadline`);
+  }
+
+  if (processError) {
+    throw processError;
+  }
 
   if (inputError && (inputError.code !== 'EPIPE' || result.code === 0)) {
     throw new Error(`Cannot send store paths to Nix: ${inputError.code}`, {
@@ -389,6 +419,7 @@ async function publish({ cache, name, rev, roots }) {
           path.join(directory, 'netrc'),
         ],
         roots,
+        60 * 60 * 1000,
       );
       return true;
     });
@@ -414,9 +445,13 @@ async function publish({ cache, name, rev, roots }) {
       source[root].narSize < source[smallest].narSize ? root : smallest,
     );
     await retry(name, 'Download probe', () =>
-      nix(verification, [
-        probe,
-      ]),
+      nix(
+        verification,
+        [
+          probe,
+        ],
+        15 * 60 * 1000,
+      ),
     );
     console.log(`${name}: cache closure verified for ${rev}`);
   } finally {
