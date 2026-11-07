@@ -16,13 +16,13 @@
 }:
 stdenv.mkDerivation (finalAttrs: {
   pname = "plasma-plugin-waywallen";
-  version = "0.4.3";
+  version = "0.4.5";
 
   src = fetchFromGitHub {
     owner = "waywallen";
     repo = "waywallen-display";
     tag = "v${finalAttrs.version}";
-    hash = "sha256-pYc7n+FB3Y3BHP+bkExhqZWXZPUEXbNcTYFQIj+rBS4=";
+    hash = "sha256-RJjxGK4saDmoOGhGtK68vdRRheLAZ6BoUkTL8hzNU/0=";
   };
 
   cmakeFlags = [
@@ -68,7 +68,7 @@ stdenv.mkDerivation (finalAttrs: {
 
   installPhase = ''
     runHook preInstall
-    archives=(waywallen-kde-*-embed.zip)
+    archives=(waywallen-kde-*.zip)
     (( ''${#archives[@]} == 1 ))
     wallpapers=$out/share/plasma/wallpapers
     qmlModule=$wallpapers/org.waywallen.kde/contents/ui/Plugin
