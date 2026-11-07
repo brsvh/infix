@@ -16,8 +16,8 @@ let
 
   src = fetchgit {
     url = "https://github.com/yibie/org-table-widget.git";
-    rev = "75740f175c1f8df01e489d71169e46fd2b3fb8f0";
-    hash = "sha256-BJbKNKqLTAGZq3O/Ovq9wFBgueYgX5q7tvbiZdwb4zU=";
+    rev = "20d9dd5b8d1a8e796aa1ee807f6df3b136b0c82c";
+    hash = "sha256-5edz+Hpik8jpTqcIEg2jvclsS56/BmoCdqZfx313QbA=";
   };
 
   meta = {
